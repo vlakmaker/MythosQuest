@@ -60,30 +60,20 @@ def ai_dungeon_master(player_input):
 
 def load_last_session():
     """
-    Loads the most recent scenario and character from memory.
-    If they are missing, the player is prompted to select a scenario and create a character.
+    Loads the most recent scenario and character from memory. 
+    If a scenario already exists, skip re-selection.
     """
-    recent_memories = memory.get_recent_memories()
+    last_scenario = memory.get_latest_memory_by_type('setting')
+    last_character = memory.get_latest_memory_by_type('character')
 
-    last_scenario = None
-    last_character = None
-
-    for mem in recent_memories:
-        if mem['memory_type'] == 'setting' and not last_scenario:
-            last_scenario = mem['description']
-        if mem['memory_type'] == 'character' and not last_character:
-            last_character = mem['description']
-
-    if last_scenario:
+    if last_scenario and last_character:
         print(f"\n🕰️ Resuming your last scenario: {last_scenario}\n")
-    else:
-        return choose_historical_period()
-
-    if last_character:
         print(f"\n🎭 Your character: {last_character}\n")
     else:
-        return create_character()
-
+        if not last_scenario:
+            choose_historical_period()
+        if not last_character:
+            create_character()
 
 def create_character():
     """
