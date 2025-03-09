@@ -53,5 +53,16 @@ class MemoryManager:
             'timestamp': timestamp
         } for mtype, desc, info, timestamp in results]
 
+    def get_latest_memory_by_type(self, memory_type):
+        """
+        Retrieves the latest saved memory of a given type (e.g., setting, character).
+        """
+        cursor = self.connection.execute(
+            'SELECT description FROM player_memory WHERE memory_type=? ORDER BY timestamp DESC LIMIT 1',
+            (memory_type,)
+        )
+        result = cursor.fetchone()
+        return result[0] if result else None
+
     def close(self):
         self.connection.close()
