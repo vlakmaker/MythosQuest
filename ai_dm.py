@@ -27,16 +27,10 @@ def ai_dungeon_master(player_input):
     if not last_character:
         return create_character()
 
-    # Debug info for tracking memory
-    print("\n🔍 DEBUG: Sending this to the AI:\n")
-    print(f"System Prompt: {last_scenario} | {last_character}\n")
-    print(f"Past Actions:\n{past_actions}\n")
-    print(f"User Input: {player_input}\n")
-
-    # Filter out irrelevant actions (e.g., 'git init')
+    # Filter out irrelevant past actions
     filtered_past_actions = [act for act in recent_memories if 'git' not in act['description'].lower()]
 
-    # Ensure we have historical context
+    # Format past actions into narrative context
     past_actions_summary = "\n".join(
         [f"- {mem['description']}" for mem in filtered_past_actions if mem['memory_type'] == 'choice']
     )
@@ -45,13 +39,17 @@ def ai_dungeon_master(player_input):
         model="mistral",
         messages=[
             {"role": "system", "content": (
-                "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST stay fully immersed in the world. "
-                "NEVER break character, NEVER reference modern AI capabilities. "
-                "The current historical setting is: {last_scenario}. "
-                "The player's character is: {last_character}. "
-                f"Here are their past actions:\n{past_actions_summary}. "
-                "🚨 IMPORTANT: You **MUST** provide **THREE relevant story-based choices** that fit the player's current historical context. "
-                "DO NOT generate generic answers—only give immersive, era-appropriate actions."
+                "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST remain immersive and engaging. "
+                "Your responses should include **rich descriptions, emotional weight, and NPC dialogue**. "
+                f"The setting is: {last_scenario}. "
+                f"The player's character is: {last_character}. "
+                f"Past events include:\n{past_actions_summary}. "
+                "🎭 **You MUST follow this format:**\n\n"
+                "**[🌆 Scene Description]**: (Describe the environment, mood, and current situation)\n"
+                "**[💬 NPC Interaction]**: (Make an NPC interact with the player based on their past choices)\n"
+                "**[🛠️ Action Consequences]**: (Describe what happens as a result of the player’s last action)\n"
+                "**[📜 Choices]**: (Provide 3 roleplay-driven actions that move the story forward)\n\n"
+                "🚨 **You MUST stay in character at all times and make the experience engaging!**"
             )},
             {"role": "user", "content": player_input},
         ]
