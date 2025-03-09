@@ -6,22 +6,54 @@ memory = MemoryManager()
 def ai_dungeon_master(player_input):
     """
     Generates AI responses while considering past player choices and historical memory.
+    Dynamically suggests next actions based on the historical context.
     """
     # Save player's action
     memory.save_memory('choice', player_input)
 
     # Retrieve recent memories for AI context
-    recent_memories = memory.get_recent_memories()
-    memory_context = "\n".join(
-        [f"{mem['memory_type']}: {mem['description']}" for mem in recent_memories]
+    recent_memories = memory.get_recent_memories(limit=10)
+    last_scenario = memory.get_latest_memory_by_type('setting')
+    last_character = memory.get_latest_memory_by_type('character')
+
+    # Retrieve past player actions
+    past_actions = "\n".join(
+        [f"- {mem['description']}" for mem in recent_memories if mem['memory_type'] == 'choice']
     )
 
-    # Generate AI response with memory
+    # If no scenario or character exists, re-run setup
+    if not last_scenario:
+        return choose_historical_period()
+    if not last_character:
+        return create_character()
+
+    # Debug info for tracking memory
+    print("\n🔍 DEBUG: Sending this to the AI:\n")
+    print(f"System Prompt: {last_scenario} | {last_character}\n")
+    print(f"Past Actions:\n{past_actions}\n")
+    print(f"User Input: {player_input}\n")
+
+    # Filter out irrelevant actions (e.g., 'git init')
+    filtered_past_actions = [act for act in recent_memories if 'git' not in act['description'].lower()]
+
+    # Ensure we have historical context
+    past_actions_summary = "\n".join(
+        [f"- {mem['description']}" for mem in filtered_past_actions if mem['memory_type'] == 'choice']
+    )
+
     response = ollama.chat(
         model="mistral",
         messages=[
-            {"role": "system", "content": f"You are a historical RPG Dungeon Master. Here are recent player decisions:\n{memory_context}"},
-            {"role": "user", "content": player_input}
+            {"role": "system", "content": (
+                "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST stay fully immersed in the world. "
+                "NEVER break character, NEVER reference modern AI capabilities. "
+                "The current historical setting is: {last_scenario}. "
+                "The player's character is: {last_character}. "
+                f"Here are their past actions:\n{past_actions_summary}. "
+                "🚨 IMPORTANT: You **MUST** provide **THREE relevant story-based choices** that fit the player's current historical context. "
+                "DO NOT generate generic answers—only give immersive, era-appropriate actions."
+            )},
+            {"role": "user", "content": player_input},
         ]
     )
 
@@ -31,6 +63,7 @@ def ai_dungeon_master(player_input):
 def load_last_session():
     """
     Loads the most recent scenario and character from memory.
+    If they are missing, the player is prompted to select a scenario and create a character.
     """
     recent_memories = memory.get_recent_memories()
 
@@ -46,12 +79,12 @@ def load_last_session():
     if last_scenario:
         print(f"\n🕰️ Resuming your last scenario: {last_scenario}\n")
     else:
-        choose_historical_period()
+        return choose_historical_period()
 
     if last_character:
         print(f"\n🎭 Your character: {last_character}\n")
     else:
-        create_character()
+        return create_character()
 
 
 def create_character():
@@ -99,38 +132,6 @@ def choose_historical_period():
         print("\n⚠️ Invalid choice. Please restart and select a valid number.")
 
 
-def present_action_choices():
-    """
-    Gives structured choices for major player decisions.
-    """
-    print("\n🔹 **Choose an Action:**")
-    print("1️⃣ Gather Intelligence")
-    print("2️⃣ Infiltrate the Nobility")
-    print("3️⃣ Spread Revolutionary Propaganda")
-    print("4️⃣ Sabotage Royal Operations")
-    print("5️⃣ Build Alliances")
-    print("6️⃣ Engage in Espionage")
-    print("7️⃣ Assassination")
-    print("8️⃣ Escape")
-
-
-def process_player_choice(choice):
-    """
-    Converts player choice into a command for the AI.
-    """
-    actions = {
-        "1": "I gather intelligence on the monarchy's movements.",
-        "2": "I infiltrate the nobility to uncover secrets.",
-        "3": "I spread revolutionary propaganda through pamphlets.",
-        "4": "I sabotage the monarchy's operations to weaken their influence.",
-        "5": "I form new alliances to strengthen my position.",
-        "6": "I engage in espionage, collecting valuable information.",
-        "7": "I consider assassinating a key noble figure to further the cause.",
-        "8": "I prepare to escape Paris before the situation worsens."
-    }
-    return actions.get(choice, None)
-
-
 if __name__ == "__main__":
     print("🎲 Welcome to **MythosQuest: The AI Dungeon Master!**")
     print("📝 Type 'exit' anytime to save and quit.\n")
@@ -138,19 +139,13 @@ if __name__ == "__main__":
     load_last_session()  # Load previous session data if available
 
     while True:
-        present_action_choices()
-        player_input = input("\n🗣️ **What do you want to do? (Type a number or write freely)** ")
+        player_input = input("\n🗣️ **What do you want to do? (Write freely)** ")
 
         if player_input.lower() == 'exit':
             print("\n💾 Game saved. Come back soon!")
             break
 
-        if player_input.isdigit() and player_input in "12345678":
-            action_description = process_player_choice(player_input)
-            response = ai_dungeon_master(action_description)
-        else:
-            response = ai_dungeon_master(player_input)  # Open-ended freeform text
-
+        response = ai_dungeon_master(player_input)
         print("\n" + response + "\n")
 
     memory.close()
