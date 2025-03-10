@@ -1,4 +1,4 @@
-# Use an official lightweight Python image
+# Use an official Python image
 FROM python:3.10
 
 # Set the working directory inside the container

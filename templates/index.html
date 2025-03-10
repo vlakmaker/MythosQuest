@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MythosQuest - AI Dungeon Master</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #1e1e1e; color: white; text-align: center; }
+        .chat-box { max-width: 600px; margin: 20px auto; background: #2e2e2e; padding: 20px; border-radius: 10px; }
+        .response-box { min-height: 200px; text-align: left; padding: 10px; background: #3e3e3e; border-radius: 5px; margin-bottom: 10px; }
+        input[type="text"] { width: 80%; padding: 10px; }
+        button { padding: 10px; cursor: pointer; background: #007BFF; color: white; border: none; }
+    </style>
+</head>
+<body>
+
+    <h1>🎲 Welcome to <strong>MythosQuest: The AI Dungeon Master!</strong></h1>
+    <p>📝 Type your action below and press Enter to continue...</p>
+
+    <div class="chat-box">
+        <div class="response-box" id="response-box">
+            <p><strong>DM:</strong> What do you want to do?</p>
+        </div>
+        <input type="text" id="user-input" placeholder="Enter your action..." autofocus>
+        <button onclick="sendInput()">Send</button>
+    </div>
+
+    <script>
+        async function sendInput() {
+            let userInput = document.getElementById("user-input").value;
+            if (!userInput) return;
+
+            let chatBox = document.getElementById("response-box");
+            chatBox.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
+
+            let response = await fetch("/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: userInput })
+            });
+
+            let data = await response.json();
+            chatBox.innerHTML += `<p><strong>DM:</strong> ${data.response}</p>`;
+            
+            document.getElementById("user-input").value = "";  // Clear input
+            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll down
+        }
+
+        document.getElementById("user-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") sendInput();
+        });
+    </script>
+
+</body>
+</html>

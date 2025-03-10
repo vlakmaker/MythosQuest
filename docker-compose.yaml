@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   mythosquest:
     build: .
@@ -33,7 +35,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        ollama pull mistral || true
+        ollama pull gemma:2b || true
         ollama serve
 
 volumes:
