@@ -1,7 +1,15 @@
 import ollama
 from memory_manager import MemoryManager
+from rag_manager import RAGManager
+
+# Set Ollama server host correctly
+OLLAMA_HOST = "http://ollama_server:11434"
 
 memory = MemoryManager()
+rag = RAGManager()
+
+# Initialize Ollama Client
+ollama_client = ollama.Client(host=OLLAMA_HOST)  # ✅ Corrected Ollama Client connection
 
 def ai_dungeon_master(player_input):
     """
@@ -27,36 +35,36 @@ def ai_dungeon_master(player_input):
     if not last_character:
         return create_character()
 
-    # Filter out irrelevant past actions
-    filtered_past_actions = [act for act in recent_memories if 'git' not in act['description'].lower()]
-
     # Format past actions into narrative context
     past_actions_summary = "\n".join(
-        [f"- {mem['description']}" for mem in filtered_past_actions if mem['memory_type'] == 'choice']
+        [f"- {mem['description']}" for mem in recent_memories if mem['memory_type'] == 'choice']
     )
 
-    response = ollama.chat(
-        model="mistral",
-        messages=[
-            {"role": "system", "content": (
-                "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST remain immersive and engaging. "
-                "Your responses should include **rich descriptions, emotional weight, and NPC dialogue**. "
-                f"The setting is: {last_scenario}. "
-                f"The player's character is: {last_character}. "
-                f"Past events include:\n{past_actions_summary}. "
-                "🎭 **You MUST follow this format:**\n\n"
-                "**[🌆 Scene Description]**: (Describe the environment, mood, and current situation)\n"
-                "**[💬 NPC Interaction]**: (Make an NPC interact with the player based on their past choices)\n"
-                "**[🛠️ Action Consequences]**: (Describe what happens as a result of the player’s last action)\n"
-                "**[📜 Choices]**: (Provide 3 roleplay-driven actions that move the story forward)\n\n"
-                "🚨 **You MUST stay in character at all times and make the experience engaging!**"
-            )},
-            {"role": "user", "content": player_input},
-        ]
-    )
+    try:
+        response = ollama_client.chat(  # ✅ Corrected call to Ollama Client
+            model="mistral",
+            messages=[
+                {"role": "system", "content": (
+                    "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST remain immersive and engaging. "
+                    "Your responses should include **rich descriptions, emotional weight, and NPC dialogue**. "
+                    f"The setting is: {last_scenario}. "
+                    f"The player's character is: {last_character}. "
+                    f"Past events include:\n{past_actions_summary}. "
+                    "🎭 **You MUST follow this format:**\n\n"
+                    "**[🌆 Scene Description]**: (Describe the environment, mood, and current situation)\n"
+                    "**[💬 NPC Interaction]**: (Make an NPC interact with the player based on their past choices)\n"
+                    "**[🛠️ Action Consequences]**: (Describe what happens as a result of the player’s last action)\n"
+                    "**[📜 Choices]**: (Provide 3 roleplay-driven actions that move the story forward)\n\n"
+                    "🚨 **You MUST stay in character at all times and make the experience engaging!**"
+                )},
+                {"role": "user", "content": player_input},
+            ]
+        )
 
-    return response['message']['content']
+        return response['message']['content']
 
+    except Exception as e:
+        return f"⚠️ **Error communicating with Ollama:** {str(e)}"
 
 def load_last_session():
     """
@@ -90,7 +98,6 @@ def create_character():
 
     print(f"\n🌟 Welcome, {name} the {role}! Your journey begins...\n")
 
-
 def choose_historical_period():
     """
     Allows the player to select a historical period if not already saved.
@@ -119,7 +126,6 @@ def choose_historical_period():
     else:
         print("\n⚠️ Invalid choice. Please restart and select a valid number.")
 
-
 if __name__ == "__main__":
     print("🎲 Welcome to **MythosQuest: The AI Dungeon Master!**")
     print("📝 Type 'exit' anytime to save and quit.\n")
@@ -127,13 +133,21 @@ if __name__ == "__main__":
     load_last_session()  # Load previous session data if available
 
     while True:
-        player_input = input("\n🗣️ **What do you want to do? (Write freely)** ")
+        try:
+            player_input = input("\n🗣️ **What do you want to do? (Write freely)** ")
 
-        if player_input.lower() == 'exit':
+            if player_input.lower() == 'exit':
+                print("\n💾 Game saved. Come back soon!")
+                break
+
+            response = ai_dungeon_master(player_input)
+            print("\n" + response + "\n")
+
+        except EOFError:
+            print("\n⚠️ No input received. Exiting gracefully...")
+            break
+        except KeyboardInterrupt:
             print("\n💾 Game saved. Come back soon!")
             break
-
-        response = ai_dungeon_master(player_input)
-        print("\n" + response + "\n")
 
     memory.close()

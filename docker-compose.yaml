@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  mythosquest:
+    build: .
+    container_name: mythosquest_ai
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=ai_dm.py
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - chromadb
+      - ollama_server
+    stdin_open: true  # Enables interactive input (STDIN)
+    tty: true         # Allocates a TTY for terminal interaction
+    command: ["python", "/app/ai_dm.py"]  # Ensures the script starts immediately
+
+  chromadb:
+    image: ghcr.io/chroma-core/chroma
+    container_name: chroma_db
+    ports:
+      - "8000:8000"
+
+  ollama_server:
+    image: ollama/ollama
+    container_name: ollama_server
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+volumes:
+  ollama_models:
