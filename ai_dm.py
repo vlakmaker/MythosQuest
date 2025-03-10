@@ -20,12 +20,10 @@ rag = RAGManager()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-
 @app.route("/")
 def index():
     """Render the web-based interface"""
     return render_template("index.html")
-
 
 def stream_response(prompt):
     """
@@ -33,7 +31,7 @@ def stream_response(prompt):
     """
     try:
         response = ollama_client.chat(
-            model="gemma:2b",  # Use Gemma for better performance
+            model="gemma:2b",
             messages=[{"role": "user", "content": prompt}],
             stream=True  # Enables streaming response
         )
@@ -41,11 +39,10 @@ def stream_response(prompt):
         for chunk in response:
             if "message" in chunk:
                 yield chunk["message"]["content"] + " "
-
+    
     except Exception as e:
         logging.error(f"Error communicating with Ollama: {str(e)}")
         yield f"⚠️ Error: {str(e)}"
-
 
 @app.route("/generate", methods=["POST"])
 def generate_response():
@@ -76,27 +73,26 @@ def generate_response():
     # Save player input to memory
     memory.save_memory('choice', player_input)
 
-    # AI prompt format
     prompt = f"""
-    🎲 **MythosQuest: Historical RPG Dungeon Master Mode**
+    🎲 **DM Roleplay Mode Engaged**
     
-    📜 **Setting**: {last_scenario}
-    🎭 **Character**: {last_character}
+    You are the Dungeon Master for an **immersive historical RPG**. Stay in character, respond dynamically.
+    
+    **World Setting**: {last_scenario}
+    **Player Character**: {last_character}
     
     **Recent Actions:**
     {past_actions_summary}
 
-    ---
-    🌆 **Scene Description**: Describe the current environment and atmosphere.
-    💬 **NPC Interaction**: Introduce a new NPC and make them engage with the player.
-    🛠 **Action Consequences**: Explain what happens due to the last action.
-    📜 **Choices**: Provide 3 immersive options for the player to continue.
-
-    🚨 **Stay immersive & engaging!**
+    🎭 **[🌆 Scene Description]**: Describe the environment, mood, and situation.
+    💬 **[NPC Interaction]**: Introduce an NPC and have them interact with the player.
+    🛠️ **[Action Consequences]**: Describe what happens due to the player’s last action.
+    📜 **[Choices]**: Offer 3 options for the player to continue the adventure.
+    
+    🚨 Stay immersive, don’t break character!
     """
 
     return Response(stream_response(prompt), content_type='text/plain')
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

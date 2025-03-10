@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #1e1e1e; color: white; text-align: center; }
         .chat-box { max-width: 600px; margin: 20px auto; background: #2e2e2e; padding: 20px; border-radius: 10px; }
-        .response-box { min-height: 200px; text-align: left; padding: 10px; background: #3e3e3e; border-radius: 5px; margin-bottom: 10px; }
+        .response-box { min-height: 200px; text-align: left; padding: 10px; background: #3e3e3e; border-radius: 5px; margin-bottom: 10px; overflow-y: auto; max-height: 400px; }
         input[type="text"] { width: 80%; padding: 10px; }
         button { padding: 10px; cursor: pointer; background: #007BFF; color: white; border: none; }
     </style>
@@ -39,9 +39,17 @@
                 body: JSON.stringify({ prompt: userInput })
             });
 
-            let data = await response.json();
-            chatBox.innerHTML += `<p><strong>DM:</strong> ${data.response}</p>`;
-            
+            const reader = response.body.getReader();
+            let decoder = new TextDecoder();
+            let text = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                text += decoder.decode(value, { stream: true });
+                chatBox.innerHTML += `<p><strong>DM:</strong> ${text}</p>`;
+            }
+
             document.getElementById("user-input").value = "";  // Clear input
             chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll down
         }
