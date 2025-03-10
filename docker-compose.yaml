@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mythosquest:
     build: .
@@ -14,7 +12,7 @@ services:
       - ollama_server
     stdin_open: true  # Enables interactive input (STDIN)
     tty: true         # Allocates a TTY for terminal interaction
-    command: ["python", "/app/ai_dm.py"]  # Ensures the script starts immediately
+    command: ["python", "ai_dm.py"]  # ✅ Ensures Flask runs correctly
 
   chromadb:
     image: ghcr.io/chroma-core/chroma

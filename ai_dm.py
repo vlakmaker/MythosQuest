@@ -1,15 +1,36 @@
+from flask import Flask, request, jsonify
 import ollama
 from memory_manager import MemoryManager
 from rag_manager import RAGManager
 
-# Set Ollama server host correctly
+app = Flask(__name__)  # ✅ Ensures Flask is correctly initialized
+
 OLLAMA_HOST = "http://ollama_server:11434"
 
 memory = MemoryManager()
 rag = RAGManager()
+ollama_client = ollama.Client(host=OLLAMA_HOST)
 
-# Initialize Ollama Client
-ollama_client = ollama.Client(host=OLLAMA_HOST)  # ✅ Corrected Ollama Client connection
+@app.route("/generate", methods=["POST"])
+def generate_response():
+    data = request.json
+    prompt = data.get("prompt", "")
+
+    if not prompt:
+        return jsonify({"error": "No prompt provided"}), 400
+
+    response = ollama_client.chat(
+        model="mistral",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return jsonify({"response": response['message']['content']})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)  # ✅ Ensures it runs on all interfaces
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def ai_dungeon_master(player_input):
     """
@@ -25,7 +46,7 @@ def ai_dungeon_master(player_input):
     last_character = memory.get_latest_memory_by_type('character')
 
     # Retrieve past player actions
-    past_actions = "\n".join(
+    past_actions_summary = "\n".join(
         [f"- {mem['description']}" for mem in recent_memories if mem['memory_type'] == 'choice']
     )
 
@@ -35,35 +56,32 @@ def ai_dungeon_master(player_input):
     if not last_character:
         return create_character()
 
-    # Format past actions into narrative context
-    past_actions_summary = "\n".join(
-        [f"- {mem['description']}" for mem in recent_memories if mem['memory_type'] == 'choice']
-    )
-
     try:
-        response = ollama_client.chat(  # ✅ Corrected call to Ollama Client
-            model="mistral",
-            messages=[
-                {"role": "system", "content": (
-                    "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST remain immersive and engaging. "
-                    "Your responses should include **rich descriptions, emotional weight, and NPC dialogue**. "
-                    f"The setting is: {last_scenario}. "
-                    f"The player's character is: {last_character}. "
-                    f"Past events include:\n{past_actions_summary}. "
-                    "🎭 **You MUST follow this format:**\n\n"
-                    "**[🌆 Scene Description]**: (Describe the environment, mood, and current situation)\n"
-                    "**[💬 NPC Interaction]**: (Make an NPC interact with the player based on their past choices)\n"
-                    "**[🛠️ Action Consequences]**: (Describe what happens as a result of the player’s last action)\n"
-                    "**[📜 Choices]**: (Provide 3 roleplay-driven actions that move the story forward)\n\n"
-                    "🚨 **You MUST stay in character at all times and make the experience engaging!**"
-                )},
-                {"role": "user", "content": player_input},
-            ]
-        )
+        payload = {
+            "model": "mistral",
+            "prompt": (
+                "⚠️ YOU ARE A HISTORICAL RPG DUNGEON MASTER. You MUST remain immersive and engaging. "
+                "Your responses should include **rich descriptions, emotional weight, and NPC dialogue**. "
+                f"The setting is: {last_scenario}. "
+                f"The player's character is: {last_character}. "
+                f"Past events include:\n{past_actions_summary}. "
+                "🎭 **You MUST follow this format:**\n\n"
+                "**[🌆 Scene Description]**: (Describe the environment, mood, and current situation)\n"
+                "**[💬 NPC Interaction]**: (Make an NPC interact with the player based on their past choices)\n"
+                "**[🛠️ Action Consequences]**: (Describe what happens as a result of the player’s last action)\n"
+                "**[📜 Choices]**: (Provide 3 roleplay-driven actions that move the story forward)\n\n"
+                "🚨 **You MUST stay in character at all times and make the experience engaging!**"
+            )
+        }
 
-        return response['message']['content']
+        response = requests.post(f"{OLLAMA_HOST}/api/generate", json=payload)
+        response.raise_for_status()  # Handle non-200 responses
+        ai_response = response.json().get("message", {}).get("content", "No response from Ollama.")
 
-    except Exception as e:
+        return ai_response
+
+    except requests.RequestException as e:
+        logging.error(f"Error communicating with Ollama: {str(e)}")
         return f"⚠️ **Error communicating with Ollama:** {str(e)}"
 
 def load_last_session():
