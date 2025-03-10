@@ -10,9 +10,6 @@ COPY requirements.txt requirements.txt
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure Ollama is installed
-RUN pip install ollama
-
 # Copy all project files to the container
 COPY . .
 
