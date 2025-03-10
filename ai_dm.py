@@ -25,24 +25,39 @@ def index():
     """Render the web-based interface"""
     return render_template("index.html")
 
+
 def stream_response(prompt):
     """
-    Streams the AI's response gradually to improve perceived performance.
+    Streams the AI's response in readable chunks instead of character-by-character.
     """
     try:
         response = ollama_client.chat(
             model="gemma:2b",
             messages=[{"role": "user", "content": prompt}],
-            stream=True  # Enables streaming response
+            stream=True
         )
+
+        full_text = ""
+        buffer = ""  # Temporary storage for chunks
 
         for chunk in response:
             if "message" in chunk:
-                yield chunk["message"]["content"] + " "
-    
+                buffer += chunk["message"]["content"]
+
+                # Only send data when a full sentence (ending in . ! ? ) is reached
+                if any(char in buffer for char in ".!?"):
+                    yield buffer + "\n"
+                    full_text += buffer + "\n"
+                    buffer = ""  # Reset buffer
+
+        # Send remaining text if anything is left
+        if buffer:
+            yield buffer + "\n"
+
     except Exception as e:
         logging.error(f"Error communicating with Ollama: {str(e)}")
         yield f"⚠️ Error: {str(e)}"
+
 
 @app.route("/generate", methods=["POST"])
 def generate_response():
@@ -93,6 +108,7 @@ def generate_response():
     """
 
     return Response(stream_response(prompt), content_type='text/plain')
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
