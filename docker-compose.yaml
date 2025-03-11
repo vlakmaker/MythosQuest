@@ -8,33 +8,9 @@ services:
     environment:
       - FLASK_APP=ai_dm.py
       - PYTHONUNBUFFERED=1
-    depends_on:
-      - chromadb
-      - ollama_server
     stdin_open: true
     tty: true
     command: ["python", "ai_dm.py"]
 
-  chromadb:
-    image: ghcr.io/chroma-core/chroma
-    container_name: chroma_db
-    restart: always
-    ports:
-      - "8000:8000"
-
-  ollama_server:
-    image: ollama/ollama
-    container_name: ollama_server
-    restart: always
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        ollama pull gemma:2b || true
-        ollama serve
-
 volumes:
-  ollama_models:
+  db_data:

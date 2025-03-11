@@ -1,17 +1,16 @@
 from flask import Flask, request, jsonify, render_template, Response
-import ollama
+import requests
 import logging
 import json
-import requests
 from memory_manager import MemoryManager
 from rag_manager import RAGManager
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Ollama connection
-OLLAMA_HOST = "http://ollama_server:11434"
-ollama_client = ollama.Client(host=OLLAMA_HOST)
+# CosmosRP API Config
+COSMOSRP_API_URL = "https://api.pawan.krd/cosmosrp-pro/v1/chat/completions"
+API_KEY = "YOUR_COSMOSRP_API_KEY"  # Replace with your actual API Key
 
 # Memory and RAG management
 memory = MemoryManager()
@@ -19,6 +18,7 @@ rag = RAGManager()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 @app.route("/")
 def index():
@@ -31,31 +31,43 @@ def stream_response(prompt):
     Streams the AI's response in readable chunks instead of character-by-character.
     """
     try:
-        response = ollama_client.chat(
-            model="gemma:2b",
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
+        payload = {
+            "model": "cosmosrp-001",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True
+        }
+
+        response = requests.post(COSMOSRP_API_URL, json=payload, headers=headers, stream=True)
+        response.raise_for_status()
 
         full_text = ""
-        buffer = ""  # Temporary storage for chunks
+        buffer = ""
 
-        for chunk in response:
-            if "message" in chunk:
-                buffer += chunk["message"]["content"]
+        for chunk in response.iter_lines():
+            if chunk:
+                try:
+                    data = json.loads(chunk.decode("utf-8"))
+                    buffer += data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
-                # Only send data when a full sentence (ending in . ! ? ) is reached
-                if any(char in buffer for char in ".!?"):
-                    yield buffer + "\n"
-                    full_text += buffer + "\n"
-                    buffer = ""  # Reset buffer
+                    # Only send data when a full sentence (ending in . ! ? ) is reached
+                    if any(char in buffer for char in ".!?"):
+                        yield buffer + "\n"
+                        full_text += buffer + "\n"
+                        buffer = ""
 
-        # Send remaining text if anything is left
+                except json.JSONDecodeError:
+                    continue
+
+        # Send remaining text if any
         if buffer:
             yield buffer + "\n"
 
-    except Exception as e:
-        logging.error(f"Error communicating with Ollama: {str(e)}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error communicating with CosmosRP: {str(e)}")
         yield f"⚠️ Error: {str(e)}"
 
 

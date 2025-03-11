@@ -1,20 +1,20 @@
-# Use an official Python image
+# Use the official Python image
 FROM python:3.10
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the requirements file to the container
-COPY requirements.txt requirements.txt
+# Copy all project files into the container
+COPY . .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files to the container
-COPY . .
-
-# Expose Flask's port
+# Expose port 5000 for the Flask web app
 EXPOSE 5000
 
-# Start Flask directly
+# Use environment variables from .env
+ENV PYTHONUNBUFFERED=1
+
+# Run the AI Dungeon Master app
 CMD ["python", "ai_dm.py"]
