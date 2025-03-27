@@ -3,3 +3,9 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Windows
+Thumbs.db
+desktop.ini
+*.lnk
+*.identifier
