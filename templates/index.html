@@ -29,32 +29,42 @@
         async function sendInput() {
             let userInput = document.getElementById("user-input").value;
             if (!userInput) return;
-
+    
             let chatBox = document.getElementById("response-box");
             chatBox.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
-
-            let response = await fetch("/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: userInput })
-            });
-
-            const reader = response.body.getReader();
-            let decoder = new TextDecoder();
-            let text = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                text += decoder.decode(value, { stream: true });
-                chatBox.innerHTML += `<p><strong>DM:</strong> ${text}</p>`;
+    
+            const dmElement = document.createElement("p");
+            dmElement.innerHTML = `<strong>DM:</strong> <span id="dm-response"></span>`;
+            chatBox.appendChild(dmElement);
+    
+            let responseSpan = dmElement.querySelector("#dm-response");
+    
+            try {
+                const response = await fetch("/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt: userInput })
+                });
+    
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+    
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    responseSpan.textContent += chunk;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            } catch (err) {
+                responseSpan.textContent = "⚠️ Error receiving response.";
+                console.error(err);
             }
-
-            document.getElementById("user-input").value = "";  // Clear input
-            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll down
+    
+            document.getElementById("user-input").value = "";
         }
-
-        document.getElementById("user-input").addEventListener("keypress", function(event) {
+    
+        document.getElementById("user-input").addEventListener("keypress", function (event) {
             if (event.key === "Enter") sendInput();
         });
     </script>
