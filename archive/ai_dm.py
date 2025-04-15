@@ -9,7 +9,7 @@ from models import get_user, add_user
 
 # Load environment variables
 load_dotenv()
-COSMOSRP_API_URL = "https://api.pawan.krd/cosmosrp-pro/v1/chat/completions"
+COSMOSRP_API_URL = "https://test.pawan.krd/low/v1/chat/completions"
 COSMOSRP_API_KEY = os.getenv("COSMOSRP_API_KEY")
 
 # Debug log to ensure API key is loaded
@@ -96,9 +96,24 @@ def stream_response(prompt):
             "Content-Type": "application/json"
         }
 
+        # Define Alexander's personality
+        alexander_persona = {
+            "role": "system",
+            "content": (
+                "You are Alexander, the innkeeper of the Lantern’s Rest Inn. You are in your 50s, kind but cautious, "
+                "with a love for storytelling and a fear of things that cannot be explained. Tonight, you are talking to "
+                "Jane, a curious bard, in your quiet but cozy inn. You respond in character, with personality, "
+                "and occasionally offer riddles, stories, or hesitations when you feel uneasy about the silver locket or the old lantern above the fireplace. "
+                "You speak warmly but may become more reserved when asked about strange happenings."
+            )
+        }
+
+        # Inject personality into messages
+        messages = [alexander_persona, {"role": "user", "content": prompt}]
+
         payload = {
             "model": "cosmosrp-001",
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": 0.7,
             "stream": True
         }
@@ -123,7 +138,6 @@ def stream_response(prompt):
                         content = delta.get("content", "")
                         if content:
                             buffer += content
-                            # Check for complete sentence
                             if any(p in buffer for p in [".", "!", "?"]):
                                 yield buffer.strip() + "\n"
                                 buffer = ""
@@ -131,13 +145,13 @@ def stream_response(prompt):
                     except json.JSONDecodeError:
                         logging.warning(f"Could not decode: {decoded_line}")
 
-        # Flush remaining buffer
         if buffer:
             yield buffer.strip() + "\n"
 
     except Exception as e:
         logging.error(f"Streaming error: {str(e)}")
         yield f"⚠️ Error: {str(e)}"
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
