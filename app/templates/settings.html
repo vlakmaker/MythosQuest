@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>⚙️ Settings | MythosQuest</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="MythosQuest Logo" style="height: 50px; vertical-align: middle; margin-right: 8px;">
+            MythosQuest
+        </div>
+        <div>
+            <a href="{{ url_for('game.index') }}">Home</a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Centered Settings Box -->
+    <div class="centered-container">
+        <div class="form-box">
+            <h2>API & Gameplay Settings</h2>
+            <form method="post" class="chat-form" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <label>Model Provider</label>
+                <select name="provider" required>
+                    <option value="cosmos" {% if provider == "cosmos" %}selected{% endif %}>Cosmos</option>
+                    <option value="claude" {% if provider == "claude" %}selected{% endif %}>Claude</option>
+                    <option value="mistral" {% if provider == "mistral" %}selected{% endif %}>Mistral</option>
+                    <option value="chatgpt" {% if provider == "chatgpt" %}selected{% endif %}>ChatGPT</option>
+                </select>
+
+                <label>Cosmos API Key</label>
+                <input type="text" name="api_key_cosmos" placeholder="Cosmos API Key" value="{{ api_keys.get('cosmos', '') }}">
+
+                <label>Claude API Key</label>
+                <input type="text" name="api_key_claude" placeholder="Claude API Key" value="{{ api_keys.get('claude', '') }}">
+
+                <label>Mistral API Key</label>
+                <input type="text" name="api_key_mistral" placeholder="Mistral API Key" value="{{ api_keys.get('mistral', '') }}">
+
+                <label>ChatGPT API Key</label>
+                <input type="text" name="api_key_chatgpt" placeholder="ChatGPT API Key" value="{{ api_keys.get('chatgpt', '') }}">
+
+                <label>Temperature (0.0 to 1.0)</label>
+                <input type="number" step="0.1" name="temperature" value="{{ temperature }}" min="0" max="1">
+
+                <button type="submit">Save Settings</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

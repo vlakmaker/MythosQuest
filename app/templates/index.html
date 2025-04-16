@@ -2,53 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MythosQuest - AI Dungeon Master</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #1e1e1e; color: white; text-align: center; }
-        .chat-box { max-width: 600px; margin: 20px auto; background: #2e2e2e; padding: 20px; border-radius: 10px; }
-        .response-box { min-height: 200px; text-align: left; padding: 10px; background: #3e3e3e; border-radius: 5px; margin-bottom: 10px; overflow-y: auto; max-height: 400px; }
-        input[type="text"] { width: 80%; padding: 10px; }
-        button { padding: 10px; cursor: pointer; background: #007BFF; color: white; border: none; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <h1>🎲 Welcome to <strong>MythosQuest: The AI Dungeon Master!</strong></h1>
-    <p>📝 Type your action below and press Enter to continue...</p>
-
-    <div class="chat-box">
-        <div class="response-box" id="response-box">
-            <p><strong>DM:</strong> What do you want to do?</p>
+    <!-- Navigation bar with logo and links -->
+    <nav class="navbar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="MythosQuest Logo" style="height: 50px; vertical-align: middle; margin-right: 8px;">
+            MythosQuest
         </div>
-        <input type="text" id="user-input" placeholder="Enter your action..." autofocus>
-        <button onclick="sendInput()">Send</button>
-    </div>
+        <div>
+            <a href="{{ url_for('settings.settings') }}">Settings</a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Chat UI container -->
+    <main class="chat-container">
+        <div class="chat-log" id="response-box">
+            <div class="message ai"><strong>DM:</strong> What do you want to do?</div>
+        </div>
+
+        <form class="chat-form" onsubmit="sendInput(); return false;">
+            <input type="text" id="user-input" placeholder="Enter your action..." autofocus>
+            <button type="submit">Send</button>
+        </form>
+    </main>
 
     <script>
         async function sendInput() {
-            let userInput = document.getElementById("user-input").value;
+            const userInput = document.getElementById("user-input").value;
             if (!userInput) return;
-    
-            let chatBox = document.getElementById("response-box");
-            chatBox.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
-    
-            const dmElement = document.createElement("p");
+
+            const chatBox = document.getElementById("response-box");
+            chatBox.innerHTML += `<div class='message user'><strong>You:</strong> ${userInput}</div>`;
+
+            const dmElement = document.createElement("div");
+            dmElement.classList.add("message", "ai");
             dmElement.innerHTML = `<strong>DM:</strong> <span id="dm-response"></span>`;
             chatBox.appendChild(dmElement);
-    
-            let responseSpan = dmElement.querySelector("#dm-response");
-    
+
+            const responseSpan = dmElement.querySelector("#dm-response");
+
             try {
                 const response = await fetch("/generate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: userInput })
                 });
-    
+
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-    
+
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -60,14 +68,13 @@
                 responseSpan.textContent = "⚠️ Error receiving response.";
                 console.error(err);
             }
-    
+
             document.getElementById("user-input").value = "";
         }
-    
+
         document.getElementById("user-input").addEventListener("keypress", function (event) {
             if (event.key === "Enter") sendInput();
         });
     </script>
-
 </body>
 </html>

@@ -1,14 +1,20 @@
 import sqlite3
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
+# Path to your SQLite database
 DB_PATH = "users.db"
 
 def get_db_connection():
-    return sqlite3.connect(DB_PATH)
+    """
+    Opens a new connection to the SQLite database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row  # Optional: allows dict-like access to row data
+    return conn
 
 def init_db():
     """
-    Create users table if it doesn't exist.
+    Initializes the database by creating the users table if it doesn't exist.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -24,8 +30,8 @@ def init_db():
 
 def get_user(username):
     """
-    Retrieve a user by username.
-    Returns tuple: (id, username, hashed_password) or None.
+    Retrieves a user by username.
+    Returns a row with (id, username, password) or None if not found.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -36,7 +42,8 @@ def get_user(username):
 
 def add_user(username, password):
     """
-    Add a new user with hashed password.
+    Creates a new user with a hashed password.
+    Raises an exception if the username already exists.
     """
     hashed_password = generate_password_hash(password)
     conn = get_db_connection()
@@ -45,6 +52,17 @@ def add_user(username, password):
     conn.commit()
     conn.close()
 
+def verify_user(username, password):
+    """
+    Verifies that the given password matches the stored hash for the username.
+    Returns True if valid, False otherwise.
+    """
+    user = get_user(username)
+    if user and check_password_hash(user["password"], password):
+        return True
+    return False
+
+# Run this file directly to initialize the database
 if __name__ == "__main__":
     init_db()
-    print("✅ Database initialized.")
+    print("✅ users.db initialized and ready.")
