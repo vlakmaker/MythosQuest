@@ -14,12 +14,14 @@ def stream_response(prompt):
     provider_settings = settings.get("providers", {}).get(provider, {})
     api_key = provider_settings.get("api_key", "").strip()
     api_url = provider_settings.get("api_url", "").strip()
+    model = provider_settings.get("model", "").strip()  # ✅ New line
 
     # Debug output to console
     print("\n🔍 Provider Settings Debug")
     print(f"   📦 Selected Provider: {provider}")
     print(f"   🔑 API Key: {'(provided)' if api_key else '❌ MISSING'}")
     print(f"   🌍 API URL: {api_url or '❌ MISSING'}")
+    print(f"   🧠 Model: {model or '(not needed)'}")  # ✅ Optional
     print(f"   🌡️ Temperature: {temperature}")
 
     if not api_key or not api_url:
@@ -37,7 +39,10 @@ def stream_response(prompt):
         elif provider == "chatgpt":
             yield from openai_api.stream(prompt, api_key, api_url, temperature)
         elif provider == "openrouter":
-            yield from openrouter_api.stream(prompt, api_key, api_url, temperature)
+            if not model:
+                yield "⚠️ Error: No model specified for OpenRouter."
+                return
+            yield from openrouter_api.stream(prompt, model, api_key, api_url, temperature)
         else:
             yield f"⚠️ Error: Unsupported provider '{provider}'."
     except Exception as e:

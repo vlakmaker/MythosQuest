@@ -63,6 +63,8 @@
                 <input type="text" name="openrouter_api_key" placeholder="OpenRouter API Key" value="{{ providers.get('openrouter', {}).get('api_key', '') }}">
                 <label>OpenRouter API URL</label>
                 <input type="text" name="openrouter_api_url" placeholder="OpenRouter API URL" value="{{ providers.get('openrouter', {}).get('api_url', '') }}">
+                <label>OpenRouter Model Name</label>
+                <input type="text" name="openrouter_model" placeholder="e.g., openrouter/mistralai/mistral-7b-instruct" value="{{ providers.get('openrouter', {}).get('model', '') }}">
 
                 <!-- Temperature -->
                 <label>Temperature (0.0 to 1.0)</label>

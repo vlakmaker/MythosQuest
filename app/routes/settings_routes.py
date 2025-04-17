@@ -26,7 +26,7 @@ def initialize_settings_if_missing():
                 "claude": {"api_key": "", "api_url": ""},
                 "mistral": {"api_key": "", "api_url": ""},
                 "chatgpt": {"api_key": "", "api_url": ""},
-                "openrouter": {"api_key": "", "api_url": ""}
+                "openrouter": {"api_key": "", "api_url": "", "model": ""}
             }
         }
         save_settings(default_settings)
@@ -42,24 +42,25 @@ def settings():
 
         providers = {
             "cosmos": {
-                "api_key": request.form.get("cosmos_api_key", ""),
-                "api_url": request.form.get("cosmos_api_url", "")
+                "api_key": request.form.get("cosmos_api_key", "").strip(),
+                "api_url": request.form.get("cosmos_api_url", "").strip()
             },
             "claude": {
-                "api_key": request.form.get("claude_api_key", ""),
-                "api_url": request.form.get("claude_api_url", "")
+                "api_key": request.form.get("claude_api_key", "").strip(),
+                "api_url": request.form.get("claude_api_url", "").strip()
             },
             "mistral": {
-                "api_key": request.form.get("mistral_api_key", ""),
-                "api_url": request.form.get("mistral_api_url", "")
+                "api_key": request.form.get("mistral_api_key", "").strip(),
+                "api_url": request.form.get("mistral_api_url", "").strip()
             },
             "chatgpt": {
-                "api_key": request.form.get("chatgpt_api_key", ""),
-                "api_url": request.form.get("chatgpt_api_url", "")
+                "api_key": request.form.get("chatgpt_api_key", "").strip(),
+                "api_url": request.form.get("chatgpt_api_url", "").strip()
             },
             "openrouter": {
-                "api_key": request.form.get("openrouter_api_key", ""),
-                "api_url": request.form.get("openrouter_api_url", "")
+                "api_key": request.form.get("openrouter_api_key", "").strip(),
+                "api_url": request.form.get("openrouter_api_url", "").strip(),
+                "model": request.form.get("openrouter_model", "").strip()
             }
         }
 

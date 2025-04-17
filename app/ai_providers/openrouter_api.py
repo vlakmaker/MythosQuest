@@ -2,22 +2,20 @@ import requests
 import json
 import logging
 
-def stream(prompt, api_key, api_url, temperature):
+def stream(prompt, model, api_key, api_url, temperature):
     """
-    Streams a response from OpenRouter using dynamic settings.
+    Streams a response from OpenRouter using dynamic model selection.
     """
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:5000",  # Optional: replace with your app domain if needed
+        "HTTP-Referer": "http://localhost:5000",  # Change to your domain in production
         "X-Title": "MythosQuest"
     }
 
     payload = {
-        "model": "openrouter/openchat-3.5",  # You can make this dynamic later
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "model": model,  # ✅ now dynamic
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
         "stream": True
     }
