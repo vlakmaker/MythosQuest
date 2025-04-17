@@ -10,3 +10,4 @@ desktop.ini
 *.lnk
 *.identifier
 *.code-workspace
+user_settings.json

@@ -34,25 +34,51 @@
 
     <script>
         async function sendInput() {
-            const userInput = document.getElementById("user-input").value;
+            const userInputField = document.getElementById("user-input");
+            const userInput = userInputField.value.trim(); // Trim whitespace
             if (!userInput) return;
 
             const chatBox = document.getElementById("response-box");
-            chatBox.innerHTML += `<div class='message user'><strong>You:</strong> ${userInput}</div>`;
 
+            // --- Add User Message ---
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerHTML = `<strong>You:</strong> `;
+            // Use textContent to prevent HTML injection from user input
+            userDiv.appendChild(document.createTextNode(userInput));
+            chatBox.appendChild(userDiv);
+            userInputField.value = ""; // Clear input immediately
+
+            // --- Prepare for AI Response ---
             const dmElement = document.createElement("div");
             dmElement.classList.add("message", "ai");
-            dmElement.innerHTML = `<strong>DM:</strong> <span id="dm-response"></span>`;
+            // Use a specific class for the content span
+            dmElement.innerHTML = `<strong>DM:</strong> <span class="dm-response-content"></span>`;
             chatBox.appendChild(dmElement);
+            // Scroll down to show the user message and the placeholder
+            chatBox.scrollTop = chatBox.scrollHeight;
 
-            const responseSpan = dmElement.querySelector("#dm-response");
+            const responseSpan = dmElement.querySelector(".dm-response-content");
+            let accumulatedText = ""; // Store the full raw response text
 
             try {
+                responseSpan.innerHTML = '<em>Thinking...</em>'; // Optional thinking indicator
+
                 const response = await fetch("/generate", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "text/event-stream" // Important for some backends
+                     },
                     body: JSON.stringify({ prompt: userInput })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+                }
+                 if (!response.body) {
+                     throw new Error("Response body is missing.");
+                 }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -60,21 +86,74 @@
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
+
                     const chunk = decoder.decode(value, { stream: true });
-                    responseSpan.textContent += chunk;
+                    accumulatedText += chunk;
+
+                    // Render the *entire* accumulated text, formatted
+                    renderFormattedResponse(responseSpan, accumulatedText);
+
+                    // Scroll to bottom as content streams
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
-            } catch (err) {
-                responseSpan.textContent = "⚠️ Error receiving response.";
-                console.error(err);
-            }
 
-            document.getElementById("user-input").value = "";
+                 // Final render in case the last chunk didn't end nicely
+                 renderFormattedResponse(responseSpan, accumulatedText);
+                 chatBox.scrollTop = chatBox.scrollHeight;
+
+
+            } catch (err) {
+                // Display error within the chat message itself
+                responseSpan.innerHTML = `<span style="color: red;">⚠️ Error: ${err.message}</span>`;
+                console.error("Streaming or Fetch Error:", err);
+                 // Scroll down to show the error
+                 chatBox.scrollTop = chatBox.scrollHeight;
+            } finally {
+                 // Re-focus input field after response/error
+                 userInputField.focus();
+            }
         }
 
-        document.getElementById("user-input").addEventListener("keypress", function (event) {
-            if (event.key === "Enter") sendInput();
+        function renderFormattedResponse(spanElement, rawText) {
+    // 1. Basic Sanitization
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = rawText;
+    let sanitizedText = tempDiv.innerHTML;
+
+    // 2. Normalize Newlines and Breaks
+    sanitizedText = sanitizedText
+        .replace(/\r\n/g, '\n')             // Normalize CRLF to LF
+        .replace(/\n{2,}/g, '<br><br>')     // Paragraph breaks
+        .replace(/\n/g, ' ');               // Merge wrapped lines
+
+    // 3. Emphasize *actions* (with optional space tolerance)
+    sanitizedText = sanitizedText.replace(/\* ?([^*]+?) ?\*/g, '<em>*$1*</em>');
+
+    // 4. Add spacing before bold speaker labels (like "King:" or "DM:")
+    sanitizedText = sanitizedText.replace(/(<strong>[^:]+:<\/strong>)/g, '<br><br>$1');
+
+    // 5. Trim final result to clean up stray spaces
+    sanitizedText = sanitizedText.trim();
+
+    // 6. Replace content of the span
+    spanElement.innerHTML = sanitizedText;
+}
+
+
+
+        // --- Event Listener ---
+        document.getElementById("user-input").addEventListener("keypress", function(event) {
+            // Submit on Enter unless Shift is held
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault(); // Prevent default newline insertion in input
+                sendInput();
+            }
         });
+
+        // Optional: Ensure input has focus on page load
+        // (autofocus attribute in HTML is usually sufficient)
+        // document.getElementById("user-input").focus();
+
     </script>
 </body>
 </html>

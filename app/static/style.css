@@ -216,3 +216,25 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
 
+.dm-response-content {
+    color: #dddddd;
+    line-height: 1.6;
+    font-size: 1rem;
+    white-space: pre-wrap;
+}
+
+strong {
+    color: #ffe58f; /* Soft gold for speakers */
+}
+
+em {
+    color: #c7d3e3; /* Light blue for actions */
+    font-style: italic;
+}
+
+br + br {
+    line-height: 2; /* Gives some visual spacing */
+}
+
+
+
