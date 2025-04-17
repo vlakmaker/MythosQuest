@@ -236,5 +236,15 @@ br + br {
     line-height: 2; /* Gives some visual spacing */
 }
 
+.dm-response-content {
+    line-height: 1.5;
+}
+
+.dm-response-content br + br {
+    margin-top: 0.6em;
+    display: block;
+    content: "";
+}
+
 
 

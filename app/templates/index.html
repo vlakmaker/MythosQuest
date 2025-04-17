@@ -120,22 +120,35 @@
     tempDiv.textContent = rawText;
     let sanitizedText = tempDiv.innerHTML;
 
-    // 2. Normalize Newlines and Breaks
+    // 2. Normalize newlines
     sanitizedText = sanitizedText
-        .replace(/\r\n/g, '\n')             // Normalize CRLF to LF
-        .replace(/\n{2,}/g, '<br><br>')     // Paragraph breaks
-        .replace(/\n/g, ' ');               // Merge wrapped lines
+        .replace(/\r\n/g, '\n')           // Normalize Windows newlines
+        .replace(/\n{2,}/g, '<br><br>')   // True paragraph breaks
+        .replace(/\n/g, ' ');             // Convert single newlines to space
 
-    // 3. Emphasize *actions* (with optional space tolerance)
-    sanitizedText = sanitizedText.replace(/\* ?([^*]+?) ?\*/g, '<em>*$1*</em>');
+    // 3. Fix weird word joins like 'K ing', 'Iwill', etc.
+    sanitizedText = sanitizedText
+        .replace(/\b([A-Za-z])\s+([a-z])/g, '$1$2')   // Join broken words
+        .replace(/([a-z])([A-Z])/g, '$1 $2');         // Add space between glued words
 
-    // 4. Add spacing before bold speaker labels (like "King:" or "DM:")
-    sanitizedText = sanitizedText.replace(/(<strong>[^:]+:<\/strong>)/g, '<br><br>$1');
+    // 4. Bold speaker tags (with line breaks before them)
+    sanitizedText = sanitizedText.replace(
+        /\b(King|Queen|Grand Vizier|Vizier|Commander|Sire|Your Majesty):/g,
+        '<br><br><strong>$1:</strong>'
+    );
 
-    // 5. Trim final result to clean up stray spaces
+    // 5. Italicize *action text*
+    sanitizedText = sanitizedText.replace(/\*([^*]+?)\*/g, '<em>*$1*</em>');
+
+    // 6. Heuristically break up dense non-dialogue paragraphs:
+    // Insert <br><br> after periods followed by capital letter (likely new sentence/section)
+    sanitizedText = sanitizedText.replace(/\. ([A-Z])/g, '.<br><br>$1');
+
+    // 7. Clean up excessive breaks
+    sanitizedText = sanitizedText.replace(/(<br><br>){2,}/g, '<br><br>');
+
+    // 8. Trim and render
     sanitizedText = sanitizedText.trim();
-
-    // 6. Replace content of the span
     spanElement.innerHTML = sanitizedText;
 }
 
