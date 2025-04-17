@@ -1,66 +1,43 @@
 import requests
 import json
 import logging
-from config import COSMOSRP_API_KEY, COSMOSRP_API_URL
+from app.routes.settings_routes import load_settings
+from app.ai_providers import cosmos_api, mistral_api, claude_api, openai_api
+
 
 def stream_response(prompt):
     """
-    Stream AI response from CosmosRP with defensive JSON handling.
+    Stream AI response from the selected provider: cosmos, mistral, claude, chatgpt.
     """
-    if not COSMOSRP_API_KEY:
-        yield "⚠️ Error: AI Service API Key is not configured."
+    settings = load_settings()
+    provider = settings.get("provider", "cosmos")
+    api_key = settings.get("api_keys", {}).get(provider)
+    temperature = settings.get("temperature", 0.7)
+
+    if not api_key:
+        yield f"⚠️ Error: API key for {provider} is not configured."
         return
 
     try:
-        headers = {
-            "Authorization": f"Bearer {COSMOSRP_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        if provider == "cosmos":
+            for chunk in cosmos_api.stream(prompt, api_key, temperature):
+                yield chunk
 
-        payload = {
-            "model": "cosmosrp-001",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "stream": True
-        }
+        elif provider == "mistral":
+            for chunk in mistral_api.stream(prompt, api_key, temperature):
+                yield chunk
 
-        response = requests.post(COSMOSRP_API_URL, headers=headers, json=payload, stream=True, timeout=60)
-        response.raise_for_status()
+        elif provider == "claude":
+            for chunk in claude_api.stream(prompt, api_key, temperature):
+                yield chunk
 
-        buffer = ""
+        elif provider == "chatgpt":
+            for chunk in openai_api.stream(prompt, api_key, temperature):
+                yield chunk
 
-        for line in response.iter_lines():
-            if not line:
-                continue
-
-            decoded_line = line.decode("utf-8").strip()
-
-            # Expecting format: data: {JSON}
-            if not decoded_line.startswith("data: "):
-                continue
-
-            json_str = decoded_line[6:].strip()
-
-            if json_str == "[DONE]":
-                break
-
-            try:
-                chunk_data = json.loads(json_str)
-                delta = chunk_data.get("choices", [{}])[0].get("delta", {})
-                content = delta.get("content", "")
-
-                if content:
-                    buffer += content
-                    if any(p in buffer for p in [".", "!", "?"]):
-                        yield buffer.strip() + "\n"
-                        buffer = ""
-
-            except json.JSONDecodeError:
-                logging.warning(f"Could not decode: {json_str}")
-
-        if buffer:
-            yield buffer.strip() + "\n"
+        else:
+            yield f"⚠️ Error: Unsupported provider '{provider}'."
 
     except Exception as e:
-        logging.error(f"Streaming error: {str(e)}")
-        yield f"⚠️ Error: {str(e)}"
+        logging.error(f"Streaming error from {provider}: {str(e)}")
+        yield f"⚠️ Error from {provider}: {str(e)}"

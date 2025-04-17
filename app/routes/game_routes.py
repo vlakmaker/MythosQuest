@@ -2,7 +2,7 @@ from flask import (
     Blueprint, render_template, redirect, url_for,
     request, jsonify, session, Response
 )
-from app.ai import stream_response
+from app.stream_response import stream_response
 
 game_bp = Blueprint("game", __name__)
 

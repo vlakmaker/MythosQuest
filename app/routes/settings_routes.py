@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for
 import json
 import os
 
@@ -14,30 +14,47 @@ def load_settings():
 
 def save_settings(data):
     with open(SETTINGS_FILE, "w") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)
 
 @settings_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     settings = load_settings()
+
     if request.method == "POST":
         provider = request.form.get("provider")
         temperature = float(request.form.get("temperature", 0.7))
-        api_keys = {
-            "cosmos": request.form.get("api_key_cosmos", ""),
-            "claude": request.form.get("api_key_claude", ""),
-            "mistral": request.form.get("api_key_mistral", ""),
-            "chatgpt": request.form.get("api_key_chatgpt", "")
+
+        providers = {
+            "cosmos": {
+                "api_key": request.form.get("cosmos_api_key", ""),
+                "api_url": request.form.get("cosmos_api_url", "")
+            },
+            "claude": {
+                "api_key": request.form.get("claude_api_key", ""),
+                "api_url": request.form.get("claude_api_url", "")
+            },
+            "mistral": {
+                "api_key": request.form.get("mistral_api_key", ""),
+                "api_url": request.form.get("mistral_api_url", "")
+            },
+            "chatgpt": {
+                "api_key": request.form.get("chatgpt_api_key", ""),
+                "api_url": request.form.get("chatgpt_api_url", "")
+            }
         }
+
         new_settings = {
             "provider": provider,
             "temperature": temperature,
-            "api_keys": api_keys
+            "providers": providers
         }
-        save_settings(new_settings)
-        return redirect(url_for('game.index'))
 
-    return render_template("settings.html",
+        save_settings(new_settings)
+        return redirect(url_for("game.index"))
+
+    return render_template(
+        "settings.html",
         provider=settings.get("provider", "cosmos"),
-        api_keys=settings.get("api_keys", {}),
+        providers=settings.get("providers", {}),
         temperature=settings.get("temperature", 0.7)
     )
