@@ -31,6 +31,7 @@
                     <option value="claude" {% if provider == "claude" %}selected{% endif %}>Claude</option>
                     <option value="mistral" {% if provider == "mistral" %}selected{% endif %}>Mistral</option>
                     <option value="chatgpt" {% if provider == "chatgpt" %}selected{% endif %}>ChatGPT</option>
+                    <option value="openrouter" {% if provider == "openrouter" %}selected{% endif %}>OpenRouter</option>
                 </select>
 
                 <!-- Cosmos -->
@@ -56,6 +57,12 @@
                 <input type="text" name="chatgpt_api_key" placeholder="ChatGPT API Key" value="{{ providers.get('chatgpt', {}).get('api_key', '') }}">
                 <label>ChatGPT API URL</label>
                 <input type="text" name="chatgpt_api_url" placeholder="ChatGPT API URL" value="{{ providers.get('chatgpt', {}).get('api_url', '') }}">
+
+                <!-- OpenRouter -->
+                <label>OpenRouter API Key</label>
+                <input type="text" name="openrouter_api_key" placeholder="OpenRouter API Key" value="{{ providers.get('openrouter', {}).get('api_key', '') }}">
+                <label>OpenRouter API URL</label>
+                <input type="text" name="openrouter_api_url" placeholder="OpenRouter API URL" value="{{ providers.get('openrouter', {}).get('api_url', '') }}">
 
                 <!-- Temperature -->
                 <label>Temperature (0.0 to 1.0)</label>

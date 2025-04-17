@@ -1,6 +1,6 @@
 import logging
 from app.routes.settings_routes import load_settings
-from app.ai_providers import cosmos_api, mistral_api, claude_api, openai_api
+from app.ai_providers import cosmos_api, mistral_api, claude_api, openai_api, openrouter_api
 
 def stream_response(prompt):
     """
@@ -36,6 +36,8 @@ def stream_response(prompt):
             yield from claude_api.stream(prompt, api_key, api_url, temperature)
         elif provider == "chatgpt":
             yield from openai_api.stream(prompt, api_key, api_url, temperature)
+        elif provider == "openrouter":
+            yield from openrouter_api.stream(prompt, api_key, api_url, temperature)
         else:
             yield f"⚠️ Error: Unsupported provider '{provider}'."
     except Exception as e:

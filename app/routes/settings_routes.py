@@ -16,8 +16,24 @@ def save_settings(data):
     with open(SETTINGS_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+def initialize_settings_if_missing():
+    if not os.path.exists(SETTINGS_FILE):
+        default_settings = {
+            "provider": "cosmos",
+            "temperature": 0.7,
+            "providers": {
+                "cosmos": {"api_key": "", "api_url": ""},
+                "claude": {"api_key": "", "api_url": ""},
+                "mistral": {"api_key": "", "api_url": ""},
+                "chatgpt": {"api_key": "", "api_url": ""},
+                "openrouter": {"api_key": "", "api_url": ""}
+            }
+        }
+        save_settings(default_settings)
+
 @settings_bp.route("/settings", methods=["GET", "POST"])
 def settings():
+    initialize_settings_if_missing()
     settings = load_settings()
 
     if request.method == "POST":
@@ -40,6 +56,10 @@ def settings():
             "chatgpt": {
                 "api_key": request.form.get("chatgpt_api_key", ""),
                 "api_url": request.form.get("chatgpt_api_url", "")
+            },
+            "openrouter": {
+                "api_key": request.form.get("openrouter_api_key", ""),
+                "api_url": request.form.get("openrouter_api_url", "")
             }
         }
 
