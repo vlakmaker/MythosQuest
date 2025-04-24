@@ -1,50 +1,101 @@
+# stream_response.py
+
 import logging
-from app.routes.settings_routes import load_settings
-from app.ai_providers import cosmos_api, mistral_api, claude_api, openai_api, openrouter_api
+from app.models import get_current_user, get_user_api_key # User model needed for prefs
+from app.crypto_utils import decrypt_api_key
+# Import specific provider modules
+from app.ai_providers import cosmos_api, openrouter_api
+# Import specific models if needed, or handle dynamically
+
+# --- Define Provider Configurations ---
+# Store details needed for each provider
+PROVIDER_CONFIG = {
+    "openrouter": {
+        "api_url": "https://openrouter.ai/api/v1/chat/completions",
+        # You might want to store preferred model per user too later
+        "default_model": "mistralai/mistral-7b-instruct",
+        "stream_function": openrouter_api.stream,
+        "requires_model": True # Does this provider need a model specified in payload?
+    },
+    "cosmos": {
+        # Get URL from config or hardcode. For production, use config.
+        "api_url": "https://api.pawan.krd/cosmosrp-pro/v1/chat/completions",
+        "default_model": "cosmosrp-001", # Model seems fixed in payload for cosmos_api.py
+        "stream_function": cosmos_api.stream,
+        "requires_model": False # cosmos_api.py doesn't seem to pass the model arg
+    }
+    # Add configuration for other providers (mistral, claude, etc.) here
+}
 
 def stream_response(prompt):
     """
-    Stream AI response from the selected provider using user-saved settings.
-    Logs and yields debug info to help track down missing or invalid settings.
+    Stream AI response based on the user's selected provider and settings.
     """
-    settings = load_settings()
-    provider = settings.get("provider", "cosmos")
-    temperature = settings.get("temperature", 0.7)
+    user = get_current_user()
+    if not user:
+        yield "⚠️ Error: No logged-in user found."
+        return
 
-    provider_settings = settings.get("providers", {}).get(provider, {})
-    api_key = provider_settings.get("api_key", "").strip()
-    api_url = provider_settings.get("api_url", "").strip()
-    model = provider_settings.get("model", "").strip()  # ✅ New line
+    # --- Get User Preferences ---
+    selected_provider = user.selected_provider or 'openrouter' # Fallback to default
+    selected_temperature = user.selected_temperature if user.selected_temperature is not None else 0.7 # Fallback
 
-    # Debug output to console
-    print("\n🔍 Provider Settings Debug")
-    print(f"   📦 Selected Provider: {provider}")
-    print(f"   🔑 API Key: {'(provided)' if api_key else '❌ MISSING'}")
-    print(f"   🌍 API URL: {api_url or '❌ MISSING'}")
-    print(f"   🧠 Model: {model or '(not needed)'}")  # ✅ Optional
-    print(f"   🌡️ Temperature: {temperature}")
+    # --- Get Provider Specific Config ---
+    config = PROVIDER_CONFIG.get(selected_provider)
+    if not config:
+        yield f"⚠️ Error: Configuration for provider '{selected_provider}' not found."
+        return
 
-    if not api_key or not api_url:
-        logging.warning(f"Missing API config for provider '{provider}': key or URL")
-        yield f"⚠️ Error: Missing API key or URL for provider '{provider}'."
+    api_url = config.get("api_url")
+    stream_function = config.get("stream_function")
+    model_required = config.get("requires_model", False)
+    # Use user's preferred model later if implemented, otherwise default
+    model = config.get("default_model") # Will be None if not defined
+
+    if not api_url or not stream_function:
+         yield f"⚠️ Error: Incomplete configuration for provider '{selected_provider}' (missing URL or stream function)."
+         return
+
+    # --- Get API Key ---
+    key_obj = get_user_api_key(user.id, selected_provider)
+    if not key_obj:
+        yield f"⚠️ Error: API key for provider '{selected_provider}' not found. Please add it in Settings."
         return
 
     try:
-        if provider == "cosmos":
-            yield from cosmos_api.stream(prompt, api_key, api_url, temperature)
-        elif provider == "mistral":
-            yield from mistral_api.stream(prompt, api_key, api_url, temperature)
-        elif provider == "claude":
-            yield from claude_api.stream(prompt, api_key, api_url, temperature)
-        elif provider == "chatgpt":
-            yield from openai_api.stream(prompt, api_key, api_url, temperature)
-        elif provider == "openrouter":
-            if not model:
-                yield "⚠️ Error: No model specified for OpenRouter."
-                return
-            yield from openrouter_api.stream(prompt, model, api_key, api_url, temperature)
+        api_key = decrypt_api_key(key_obj.key)
+    except Exception as decrypt_err:
+         logging.error(f"Decryption error for user {user.id}, provider {selected_provider}: {decrypt_err}")
+         yield f"⚠️ Error: Could not decrypt API key for '{selected_provider}'. Please re-save it."
+         return
+
+    # --- Debugging Output (Using actual values) ---
+    print("\n🚀 Preparing Generation Request:")
+    print(f"   User: {user.username} (ID: {user.id})")
+    print(f"   Selected Provider: {selected_provider}")
+    print(f"   Selected Temp: {selected_temperature}")
+    print(f"   API Key Found: {'✓' if api_key else '❌'}")
+    print(f"   Using API URL: {api_url}")
+    print(f"   Using Model: {model if model else 'N/A'}")
+    print(f"   Model Required in Payload: {model_required}")
+
+    # --- Execute Stream ---
+    try:
+        # Dynamically call the correct stream function
+        # Check function signature and pass appropriate args
+        if selected_provider == "openrouter":
+             if model_required and not model:
+                  yield f"⚠️ Error: Model identifier is required for {selected_provider} but is missing."
+                  return
+             yield from stream_function(prompt, model, api_key, api_url, selected_temperature)
+        elif selected_provider == "cosmos":
+             # Assuming cosmos_api.stream takes (prompt, api_key, api_url, temperature)
+             yield from stream_function(prompt, api_key, api_url, selected_temperature)
         else:
-            yield f"⚠️ Error: Unsupported provider '{provider}'."
+             # Handle other providers if configurations are added
+             yield f"⚠️ Provider '{selected_provider}' streaming is not implemented yet."
+
     except Exception as e:
-        logging.error(f"❌ Streaming error from {provider}: {str(e)}")
-        yield f"⚠️ Error from {provider}: {str(e)}"
+        logging.error(f"❌ Error during streaming with {selected_provider} for user {user.id}: {e}", exc_info=True)
+        # Provide a more generic error to the user, details are logged
+        yield f"❌ An error occurred while communicating with the '{selected_provider}' API."

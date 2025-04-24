@@ -1,68 +1,105 @@
-import sqlite3
+# models.py
+
+from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+import os # Import os
 
-# Path to your SQLite database
-DB_PATH = "users.db"
+# SQLAlchemy base
+Base = declarative_base()
 
-def get_db_connection():
-    """
-    Opens a new connection to the SQLite database.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # Optional: allows dict-like access to row data
-    return conn
+# --- Models --- #
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    selected_provider = Column(String, nullable=True, default='openrouter')
+    selected_temperature = Column(Float, nullable=True, default=0.7)
 
+class APIKey(Base):
+    __tablename__ = 'api_keys'
+    id = Column(Integer, primary_key=True)
+    provider = Column(String, nullable=False)
+    key = Column(String, nullable=False) # Encrypted key
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+# --- SQLAlchemy setup --- #
+basedir = os.path.abspath(os.path.dirname(__file__))
+# Place DB in project root (one level up from 'app' folder)
+SQLALCHEMY_DB_URL = "sqlite:///" + os.path.join(basedir, '..', 'users.db')
+
+engine = create_engine(SQLALCHEMY_DB_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine)
+db_session = scoped_session(SessionLocal)
+
+
+# --- Database Initialization Function (Moved Here) ---
 def init_db():
-    """
-    Initializes the database by creating the users table if it doesn't exist.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        );
-    """)
-    conn.commit()
-    conn.close()
+    """Creates database tables from SQLAlchemy models."""
+    print(f"Attempting to create tables for database at: {SQLALCHEMY_DB_URL}")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully (or already exist).")
+    except Exception as e:
+        print(f"Error during table creation: {e}")
+
+
+# *** REMOVED create_all from module level ***
+# Base.metadata.create_all(bind=engine)
+
+
+# --- User Management Functions --- #
+def add_user(username, password):
+    hashed_password = generate_password_hash(password)
+    new_user = User(
+        username=username,
+        password=hashed_password,
+        selected_provider='openrouter',
+        selected_temperature=0.7
+    )
+    db_session.add(new_user)
+    db_session.commit()
+    print(f"User '{username}' added.")
 
 def get_user(username):
-    """
-    Retrieves a user by username.
-    Returns a row with (id, username, password) or None if not found.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = cursor.fetchone()
-    conn.close()
+    # Add a check/log before querying
+    print(f"Querying for user: {username}")
+    user = db_session.query(User).filter_by(username=username).first()
+    print(f"Query result for {username}: {'Found' if user else 'Not Found'}")
     return user
 
-def add_user(username, password):
-    """
-    Creates a new user with a hashed password.
-    Raises an exception if the username already exists.
-    """
-    hashed_password = generate_password_hash(password)
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
-    conn.commit()
-    conn.close()
 
 def verify_user(username, password):
-    """
-    Verifies that the given password matches the stored hash for the username.
-    Returns True if valid, False otherwise.
-    """
     user = get_user(username)
-    if user and check_password_hash(user["password"], password):
-        return True
-    return False
+    return user and check_password_hash(user.password, password)
 
-# Run this file directly to initialize the database
-if __name__ == "__main__":
-    init_db()
-    print("✅ users.db initialized and ready.")
+def get_current_user():
+    username = session.get("user")
+    print(f"Getting current user from session: {username}")
+    if username:
+        return get_user(username)
+    print("No user found in session.")
+    return None
+
+# --- API Key Functions ---
+def get_user_api_key(user_id, provider):
+     print(f"Querying API key for user_id={user_id}, provider={provider}")
+     key = db_session.query(APIKey).filter_by(user_id=user_id, provider=provider).first()
+     print(f"API Key query result: {'Found' if key else 'Not Found'}")
+     return key
+
+# --- User Settings Function ---
+def update_user_gameplay_settings(user_id, provider, temperature):
+    """Updates the selected provider and temperature for a user."""
+    print(f"Attempting to update settings for user_id={user_id}")
+    user = db_session.query(User).filter_by(id=user_id).first()
+    if user:
+        user.selected_provider = provider
+        user.selected_temperature = temperature
+        db_session.commit()
+        print(f"Updated settings for user {user_id}: Provider={provider}, Temp={temperature}")
+        return True
+    print(f"Failed to find user with id={user_id} to update settings.")
+    return False
