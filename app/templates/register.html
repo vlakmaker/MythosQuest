@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📝 Register | MythosQuest</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h2>Create Your MythosQuest Account</h2>
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+            <form method="post" class="login-form">
+                <input type="text" name="username" placeholder="Choose a username" required>
+                <input type="password" name="password" placeholder="Create a password" required>
+                <button type="submit">Register</button>
+            </form>
+            <div class="register-link">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

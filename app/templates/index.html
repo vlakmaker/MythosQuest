@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MythosQuest - AI Dungeon Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Navigation bar with logo and links -->
+    <nav class="navbar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="MythosQuest Logo" style="height: 50px; vertical-align: middle; margin-right: 8px;">
+            MythosQuest
+        </div>
+        <div>
+            <a href="{{ url_for('settings.settings') }}">Settings</a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Chat UI container -->
+    <main class="chat-container">
+        <div class="chat-log" id="response-box">
+            <div class="message ai"><strong>DM:</strong> What do you want to do?</div>
+        </div>
+
+        <form class="chat-form" onsubmit="sendInput(); return false;">
+            <input type="text" id="user-input" placeholder="Enter your action..." autofocus>
+            <button type="submit">Send</button>
+        </form>
+    </main>
+
+    <script>
+        async function sendInput() {
+            const userInputField = document.getElementById("user-input");
+            const userInput = userInputField.value.trim(); // Trim whitespace
+            if (!userInput) return;
+
+            const chatBox = document.getElementById("response-box");
+
+            // --- Add User Message ---
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerHTML = `<strong>You:</strong> `;
+            // Use textContent to prevent HTML injection from user input
+            userDiv.appendChild(document.createTextNode(userInput));
+            chatBox.appendChild(userDiv);
+            userInputField.value = ""; // Clear input immediately
+
+            // --- Prepare for AI Response ---
+            const dmElement = document.createElement("div");
+            dmElement.classList.add("message", "ai");
+            // Use a specific class for the content span
+            dmElement.innerHTML = `<strong>DM:</strong> <span class="dm-response-content"></span>`;
+            chatBox.appendChild(dmElement);
+            // Scroll down to show the user message and the placeholder
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const responseSpan = dmElement.querySelector(".dm-response-content");
+            let accumulatedText = ""; // Store the full raw response text
+
+            try {
+                responseSpan.innerHTML = '<em>Thinking...</em>'; // Optional thinking indicator
+
+                const response = await fetch("/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "text/event-stream" // Important for some backends
+                     },
+                    body: JSON.stringify({ prompt: userInput })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+                }
+                 if (!response.body) {
+                     throw new Error("Response body is missing.");
+                 }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    accumulatedText += chunk;
+
+                    // Render the *entire* accumulated text, formatted
+                    renderFormattedResponse(responseSpan, accumulatedText);
+
+                    // Scroll to bottom as content streams
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                 // Final render in case the last chunk didn't end nicely
+                 renderFormattedResponse(responseSpan, accumulatedText);
+                 chatBox.scrollTop = chatBox.scrollHeight;
+
+
+            } catch (err) {
+                // Display error within the chat message itself
+                responseSpan.innerHTML = `<span style="color: red;">⚠️ Error: ${err.message}</span>`;
+                console.error("Streaming or Fetch Error:", err);
+                 // Scroll down to show the error
+                 chatBox.scrollTop = chatBox.scrollHeight;
+            } finally {
+                 // Re-focus input field after response/error
+                 userInputField.focus();
+            }
+        }
+
+        function renderFormattedResponse(spanElement, rawText) {
+    // 1. Basic Sanitization
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = rawText;
+    let sanitizedText = tempDiv.innerHTML;
+
+    // 2. Normalize newlines
+    sanitizedText = sanitizedText
+        .replace(/\r\n/g, '\n')           // Normalize Windows newlines
+        .replace(/\n{2,}/g, '<br><br>')   // True paragraph breaks
+        .replace(/\n/g, ' ');             // Convert single newlines to space
+
+    // 3. Fix weird word joins like 'K ing', 'Iwill', etc.
+    sanitizedText = sanitizedText
+        .replace(/\b([A-Za-z])\s+([a-z])/g, '$1$2')   // Join broken words
+        .replace(/([a-z])([A-Z])/g, '$1 $2');         // Add space between glued words
+
+    // 4. Bold speaker tags (with line breaks before them)
+    sanitizedText = sanitizedText.replace(
+        /\b(King|Queen|Grand Vizier|Vizier|Commander|Sire|Your Majesty):/g,
+        '<br><br><strong>$1:</strong>'
+    );
+
+    // 5. Italicize *action text*
+    sanitizedText = sanitizedText.replace(/\*([^*]+?)\*/g, '<em>*$1*</em>');
+
+    // 6. Heuristically break up dense non-dialogue paragraphs:
+    // Insert <br><br> after periods followed by capital letter (likely new sentence/section)
+    sanitizedText = sanitizedText.replace(/\. ([A-Z])/g, '.<br><br>$1');
+
+    // 7. Clean up excessive breaks
+    sanitizedText = sanitizedText.replace(/(<br><br>){2,}/g, '<br><br>');
+
+    // 8. Trim and render
+    sanitizedText = sanitizedText.trim();
+    spanElement.innerHTML = sanitizedText;
+}
+
+
+
+        // --- Event Listener ---
+        document.getElementById("user-input").addEventListener("keypress", function(event) {
+            // Submit on Enter unless Shift is held
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault(); // Prevent default newline insertion in input
+                sendInput();
+            }
+        });
+
+        // Optional: Ensure input has focus on page load
+        // (autofocus attribute in HTML is usually sufficient)
+        // document.getElementById("user-input").focus();
+
+    </script>
+</body>
+</html>
