@@ -1,5 +1,21 @@
-flask
-flask-login
-requests
-python-dotenv
-gunicorn
+# requirements.txt
+
+# Core Web Framework & Utilities
+flask>=2.0 # Specify a version range if needed
+Werkzeug>=2.0 # For hashing and WSGI utilities
+
+# Database ORM
+SQLAlchemy>=1.4 # Or specific version
+
+# Security & Keys
+cryptography>=3.0
+python-dotenv>=0.15
+
+# HTTP Requests for APIs
+requests>=2.25
+
+# Session Management (Optional - keep if used/planned)
+flask-login>=0.5
+
+# Production WSGI Server
+gunicorn>=20.0

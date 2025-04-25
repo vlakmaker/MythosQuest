@@ -11,3 +11,4 @@ desktop.ini
 *.identifier
 *.code-workspace
 user_settings.json
+.gpg

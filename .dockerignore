@@ -1,0 +1,16 @@
+# .dockerignore
+.git
+.gitignore
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*~
+.env
+venv/
+env/
+.venv/
+users.db
+*.db-journal
+*.sqlite3
+# Add any other files/dirs specific to your setup
