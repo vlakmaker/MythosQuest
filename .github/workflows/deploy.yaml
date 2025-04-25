@@ -1,0 +1,47 @@
+# .github/workflows/deploy.yml
+
+name: Deploy MythosQuest to Oracle Server
+
+on:
+  push:
+    branches: [ refactor ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔒 Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: 🚀 Deploy to Oracle Server
+        run: |
+          echo "Adding server to known_hosts..."
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+          echo "Connecting to server..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            echo "Navigating to deploy directory..."
+            cd ${{ secrets.DEPLOY_DIR }} || exit 1
+
+            echo "Pulling latest code..."
+            git checkout main
+            git pull origin main || exit 1
+
+            echo "Stopping existing Docker containers..."
+            docker compose down
+
+            echo "Building and starting new containers..."
+            docker compose up --build -d || exit 1
+
+            echo "Pruning old Docker images..."
+            docker image prune -af
+            docker builder prune -af
+
+            echo "Deployment complete."
+          EOF
