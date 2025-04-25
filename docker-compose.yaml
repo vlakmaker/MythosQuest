@@ -2,15 +2,7 @@ services:
   mythosquest:
     build: .
     ports:
-      - "5000:5000" # Assumes you want port 5000 exposed on the Oracle server
+      - "5000:5000"
     env_file:
-      - .env # Make sure this file exists and is secured on the server!
-    # volumes: <-- REMOVED this line for production deployment
-    #   - .:/app
+      - .env # <-- Your FERNET_KEY will live here
     restart: always
-    # Optional: Add logging driver if needed
-    # logging:
-    #   driver: "json-file"
-    #   options:
-    #     max-size: "10m"
-    #     max-file: "3"
