@@ -1,12 +1,16 @@
 services:
   mythosquest:
     build: .
-    container_name: mythosquest_ai
-    restart: always
     ports:
-      - "5000:5000"
+      - "5000:5000" # Assumes you want port 5000 exposed on the Oracle server
     env_file:
-      - .env  # Loads API key from .env file
-    stdin_open: true
-    tty: true
-    command: ["python", "ai_dm.py"]
+      - .env # Make sure this file exists and is secured on the server!
+    # volumes: <-- REMOVED this line for production deployment
+    #   - .:/app
+    restart: always
+    # Optional: Add logging driver if needed
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"
