@@ -4,29 +4,117 @@
 <head>
     <meta charset="UTF-8">
     <title>⚙️ Settings | MythosQuest</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5"> <!-- Incremented version -->
     <style>
-        /* (Keep existing feedback styles) */
-        .key-save-feedback,
-        .gameplay-save-feedback {
+        /* Basic styles for provider sections */
+        .provider-section {
+            border: 1px solid #444;
+            /* Light border */
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #2b2b2b;
+            /* Slightly different background */
+        }
+
+        .provider-section h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #eee;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            /* Align items vertically */
+            margin-bottom: 10px;
+        }
+
+        .form-row label {
+            flex-basis: 120px;
+            /* Give labels a consistent width */
+            text-align: right;
+            margin-right: 5px;
+            flex-shrink: 0;
+            /* Prevent labels from shrinking */
+        }
+
+        .form-row input[type="text"],
+        .form-row input[type="password"],
+        .form-row input[type="number"],
+        .form-row select {
+            flex-grow: 1;
+            /* Allow inputs to fill space */
+        }
+
+        .form-row button {
+            flex-shrink: 0;
+            /* Prevent button from shrinking */
+        }
+
+        /* Feedback styles */
+        .feedback {
             font-size: 0.9em;
             margin-top: 5px;
             min-height: 1.2em;
             /* Reserve space */
+            padding-left: 133px;
+            /* Align with input start */
         }
 
         .success {
-            color: green;
+            color: #4CAF50;
         }
 
+        /* Green */
         .error {
-            color: red;
+            color: #F44336;
+        }
+
+        /* Red */
+        .info {
+            color: #cccccc;
+        }
+
+        /* Light grey for info */
+
+        /* Ensure consistent input styling (might need adjustment based on style.css) */
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            background-color: #444;
+            color: #ddd;
+            border: 1px solid #666;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            /* Example button color */
+            color: white;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Adjust form-box for potentially wider content */
+        .form-box {
+            max-width: 650px;
+            /* Increase max-width if needed */
         }
     </style>
 </head>
 
 <body>
-    <!-- (Keep existing Navigation) -->
+    <!-- Navigation -->
     <nav class="navbar">
         <div class="brand">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="MythosQuest Logo"
@@ -42,99 +130,232 @@
     <!-- Settings Container -->
     <main class="centered-container">
         <div class="form-box">
-            <h2>🛠️ API & Gameplay Settings</h2>
 
-            <!-- *** Attach onsubmit handler *** -->
-            <form id="gameplay-settings-form" class="chat-form" style="flex-direction: column; gap: 12px;"
-                onsubmit="saveGameplaySettings(event)">
-                <!-- Provider -->
-                <label for="provider">Model Provider (Gameplay)</label>
-                <select id="provider" name="provider" required>
-                    <!-- *** Define available providers clearly *** -->
-                    {% set available_providers = ["openrouter", "cosmos"] %}
-                    {% for name in available_providers %}
-                    {# Use the provider variable passed from the backend #}
-                    <option value="{{ name }}" {% if provider==name %}selected{% endif %}>{{ name|capitalize }}</option>
-                    {% endfor %}
-                </select>
+            <!-- Gameplay Settings Section -->
+            <section class="gameplay-settings">
+                <h2>⚙️ Gameplay Settings</h2>
+                <form id="gameplay-settings-form" style="display: flex; flex-direction: column; gap: 12px;"
+                    onsubmit="saveGameplaySettings(event)">
+                    <div class="form-row">
+                        <label for="provider">Provider:</label>
+                        <select id="provider" name="provider" required>
+                            {% set available_providers = ["openrouter", "cosmos"] %}
+                            {% for name in available_providers %}
+                            <option value="{{ name }}" {% if provider==name %}selected{% endif %}>{{ name|capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="model">Model:</label>
+                        <select id="model" name="model" required>
+                            <!-- Options populated by JavaScript -->
+                            <option value="">-- Select Provider First --</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="temperature">Temperature:</label>
+                        <input type="number" id="temperature" step="0.1" name="temperature"
+                            value="{{ temperature | default(0.7) }}" min="0" max="2.0"
+                            title="Controls randomness (0=deterministic, 2=very random)">
+                    </div>
+                    <div class="form-row">
+                        <label for="context_size">Context Size:</label>
+                        <input type="number" id="context_size" step="1" name="context_size"
+                            value="{{ context_size | default(4096) }}" min="1" max="32768"
+                            title="Max tokens for context (affects memory/cost)">
+                    </div>
 
-                <!-- Temperature -->
-                <label for="temperature">Temperature (0.0 to 2.0)</label>
-                {# Use the temperature variable passed from the backend #}
-                <input type="number" id="temperature" step="0.1" name="temperature"
-                    value="{{ temperature | default(0.7) }}" min="0" max="2.0">
+                    <div class="form-row" style="justify-content: flex-end;"> <!-- Align button right -->
+                        <button type="submit">💾 Save Gameplay Settings</button>
+                    </div>
+                    <div id="gameplay-feedback" class="feedback"></div>
+                </form>
+            </section>
 
-                <button type="submit">💾 Save Gameplay Settings</button>
-                <!-- *** Feedback area for gameplay settings *** -->
-                <div id="gameplay-feedback" class="gameplay-save-feedback"></div>
-            </form>
+            <hr style="margin: 30px 0;">
 
-            <hr style="margin: 20px 0;">
+            <!-- API Key & URL Configuration Section -->
+            <section class="api-config">
+                <h2>🔐 API Key & URL Configuration</h2>
 
-            <!-- (Keep existing API Key Management section) -->
-            <section>
-                <h3>🔐 Secure API Key Storage</h3>
-                <!-- Example for OpenRouter -->
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-                    <label for="openrouter-key">OpenRouter API Key</label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                <!-- OpenRouter Section -->
+                <div class="provider-section">
+                    <h4>OpenRouter</h4>
+                    <div class="form-row">
+                        <label for="openrouter-key">API Key:</label>
                         <input type="password" id="openrouter-key" placeholder="sk-or-..." style="flex: 1;">
-                        <button onclick="saveKey('openrouter')">Save</button>
                     </div>
-                    <div id="openrouter-feedback" class="key-save-feedback"></div> <!-- Feedback area -->
+                    <div class="form-row">
+                        <label for="openrouter-url">API URL:</label>
+                        <input type="text" id="openrouter-url"
+                            placeholder="Optional: Defaults to OpenRouter standard URL" style="flex: 1;">
+                    </div>
+                    <div class="form-row" style="justify-content: flex-end;">
+                        <button onclick="saveKeyAndUrl('openrouter')">Save OpenRouter Config</button>
+                    </div>
+                    <div id="openrouter-feedback" class="feedback"></div>
                 </div>
-                <!-- Example for Cosmos -->
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-                    <label for="cosmos-key">Cosmos API Key</label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+
+                <!-- Cosmos Section -->
+                <div class="provider-section">
+                    <h4>Cosmos</h4>
+                    <div class="form-row">
+                        <label for="cosmos-key">API Key:</label>
                         <input type="password" id="cosmos-key" placeholder="Enter Cosmos Key" style="flex: 1;">
-                        <button onclick="saveKey('cosmos')">Save</button>
                     </div>
-                    <div id="cosmos-feedback" class="key-save-feedback"></div> <!-- Feedback area -->
+                    <div class="form-row">
+                        <label for="cosmos-url">API URL:</label>
+                        <input type="text" id="cosmos-url" placeholder="Optional: Defaults to known Cosmos URL"
+                            style="flex: 1;">
+                    </div>
+                    <div class="form-row" style="justify-content: flex-end;">
+                        <button onclick="saveKeyAndUrl('cosmos')">Save Cosmos Config</button>
+                    </div>
+                    <div id="cosmos-feedback" class="feedback"></div>
                 </div>
-                <!-- Add similar blocks here for other providers -->
+
+                <!-- Add sections for other providers here -->
+
             </section>
         </div>
     </main>
 
     <!-- Scripts -->
     <script>
-        // --- Gameplay Settings Handling (New) ---
-        async function saveGameplaySettings(event) {
-            event.preventDefault(); // Prevent default form submission
+        // --- Define Known Models ---
+        const modelDefinitions = {
+            openrouter: [
+                // Add more common OpenRouter models here
+                { value: "mistralai/mistral-7b-instruct", text: "Mistral 7B Instruct" },
+                { value: "openai/gpt-3.5-turbo", text: "OpenAI GPT-3.5 Turbo" },
+                { value: "openai/gpt-4", text: "OpenAI GPT-4" },
+                { value: "openai/gpt-4-turbo", text: "OpenAI GPT-4 Turbo" },
+                { value: "google/gemini-pro", text: "Google Gemini Pro" },
+                { value: "anthropic/claude-3-haiku", text: "Anthropic Claude 3 Haiku" },
+                { value: "anthropic/claude-3-sonnet", text: "Anthropic Claude 3 Sonnet" },
+                { value: "anthropic/claude-3-opus", text: "Anthropic Claude 3 Opus" }
+                // Add an option for custom input if needed
+                // { value: "custom", text: "Custom OpenRouter Model..." }
+            ],
+            cosmos: [
+                // Assuming only one primary model for now, adjust if needed
+                { value: "cosmosrp-001", text: "CosmosRP (Default)" }
+            ]
+            // Add lists for other providers if you enable them
+        };
 
-            const providerSelect = document.getElementById('provider');
-            const temperatureInput = document.getElementById('temperature');
-            const feedbackElement = document.getElementById('gameplay-feedback');
+        // --- Model Dropdown Population ---
+        const providerSelect = document.getElementById('provider');
+        const modelSelect = document.getElementById('model');
+        // Get initial values passed from backend (used to select the correct option)
+        const initialSelectedProvider = '{{ provider | default("openrouter") }}';
+        const initialSelectedModel = '{{ selected_model | default("") }}'; // Get saved model
+
+        function populateModels(selectedProvider) {
+            modelSelect.innerHTML = ''; // Clear existing options
+
+            const models = modelDefinitions[selectedProvider] || [];
+
+            if (models.length === 0) {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "-- No models defined --";
+                modelSelect.appendChild(defaultOption);
+                modelSelect.disabled = true;
+                return;
+            }
+
+            modelSelect.disabled = false;
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.value;
+                option.textContent = model.text;
+                // Select this option if it matches the model loaded from the backend
+                if (model.value === initialSelectedModel && selectedProvider === initialSelectedProvider) {
+                    option.selected = true;
+                }
+                modelSelect.appendChild(option);
+            });
+
+            // If no model was selected from backend, try selecting the first available one
+            if (!modelSelect.value && models.length > 0) {
+                modelSelect.value = models[0].value;
+            }
+        }
+
+        // --- Event Listener for Provider Change ---
+        providerSelect.addEventListener('change', (event) => {
+            // When provider changes, repopulate models, but don't rely on initialSelectedModel
+            const currentProvider = event.target.value;
+            modelSelect.innerHTML = ''; // Clear
+            const models = modelDefinitions[currentProvider] || [];
+            if (models.length > 0) {
+                modelSelect.disabled = false;
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.text;
+                    modelSelect.appendChild(option);
+                });
+                modelSelect.value = models[0].value; // Default to first model on change
+            } else {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "-- No models defined --";
+                modelSelect.appendChild(defaultOption);
+                modelSelect.disabled = true;
+            }
+        });
+
+
+        // --- Gameplay Settings Handling ---
+        async function saveGameplaySettings(event) {
+            event.preventDefault();
 
             const provider = providerSelect.value;
-            const temperature = temperatureInput.value; // Keep as string initially for validation
+            const model = modelSelect.value; // Get selected model
+            const temperatureInput = document.getElementById('temperature');
+            const contextSizeInput = document.getElementById('context_size'); // Get context size input
+            const feedbackElement = document.getElementById('gameplay-feedback');
+
+            const temperature = temperatureInput.value;
+            const contextSize = contextSizeInput.value; // Get context size value
 
             feedbackElement.textContent = 'Saving...';
-            feedbackElement.className = 'gameplay-save-feedback'; // Reset class
+            feedbackElement.className = 'feedback'; // Reset class
 
-            // Basic frontend validation (backend does more thorough checks)
-            if (!provider) {
-                feedbackElement.textContent = 'Please select a provider.';
+            // Validation
+            if (!provider || !model) {
+                feedbackElement.textContent = 'Please select a provider and model.';
                 feedbackElement.classList.add('error');
                 return;
             }
             if (temperature === '' || isNaN(parseFloat(temperature)) || parseFloat(temperature) < 0 || parseFloat(temperature) > 2.0) {
-                feedbackElement.textContent = 'Please enter a valid temperature between 0.0 and 2.0.';
+                feedbackElement.textContent = 'Please enter a valid temperature (0.0 - 2.0).';
+                feedbackElement.classList.add('error');
+                return;
+            }
+            if (contextSize === '' || isNaN(parseInt(contextSize)) || parseInt(contextSize) < 1 || parseInt(contextSize) > 32768) { // Match backend validation
+                feedbackElement.textContent = 'Please enter a valid context size (e.g., 1-32768).';
                 feedbackElement.classList.add('error');
                 return;
             }
 
             try {
-                // *** Use the correct endpoint URL with /settings prefix ***
                 const res = await fetch('/settings/gameplay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ provider: provider, temperature: temperature })
+                    // *** Send all four settings ***
+                    body: JSON.stringify({
+                        provider: provider,
+                        temperature: temperature,
+                        model: model,
+                        context_size: contextSize
+                    })
                 });
 
-                const data = await res.json(); // Always try to parse JSON
-
+                const data = await res.json();
                 if (res.ok && data.status === "ok") {
                     feedbackElement.textContent = data.message || "Gameplay settings saved!";
                     feedbackElement.classList.add('success');
@@ -142,7 +363,6 @@
                     feedbackElement.textContent = `Error: ${data.error || res.statusText || 'Unknown error'}`;
                     feedbackElement.classList.add('error');
                 }
-
             } catch (err) {
                 feedbackElement.textContent = "Network error while saving settings.";
                 feedbackElement.classList.add('error');
@@ -150,88 +370,102 @@
             }
         }
 
-
-        // --- API Key Handling (Keep existing functions, ensure URLs are correct) ---
-
-        async function saveKey(provider) {
+        // --- API Key & URL Handling ---
+        async function saveKeyAndUrl(provider) { // Renamed function
             const keyInput = document.getElementById(`${provider}-key`);
+            const urlInput = document.getElementById(`${provider}-url`); // Get URL input
             const feedbackElement = document.getElementById(`${provider}-feedback`);
+
             const key = keyInput.value.trim();
+            const apiUrl = urlInput.value.trim(); // Get URL value
 
             feedbackElement.textContent = 'Saving...';
-            feedbackElement.className = 'key-save-feedback';
+            feedbackElement.className = 'feedback'; // Reset class
 
             if (!key) {
                 feedbackElement.textContent = 'API key cannot be empty.';
                 feedbackElement.classList.add('error');
                 return;
             }
+            // Basic URL format check (optional but helpful)
+            if (apiUrl && !apiUrl.toLowerCase().startsWith('http')) {
+                feedbackElement.textContent = 'API URL should start with http:// or https://';
+                feedbackElement.classList.add('error');
+                return;
+            }
+
 
             try {
-                // *** URL Correction: Ensure '/settings' prefix ***
-                const res = await fetch('/settings/api/keys', { // <--- Verified URL
+                const res = await fetch('/settings/api/keys', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ provider: provider, key: key })
+                    // *** Send provider, key, and apiUrl ***
+                    body: JSON.stringify({
+                        provider: provider,
+                        key: key,
+                        apiUrl: apiUrl // Send the URL
+                    })
                 });
 
-                const data = await res.json(); // Assume JSON response even on error for consistency
-
+                const data = await res.json();
                 if (res.ok && data.status === "ok") {
-                    feedbackElement.textContent = "Key saved securely!";
+                    feedbackElement.textContent = data.message || "API config saved!";
                     feedbackElement.classList.add('success');
-                    keyInput.type = 'password'; // Mask after successful save
-                    // keyInput.value = ''; // Optionally clear
+                    keyInput.type = 'password';
                 } else {
-                    feedbackElement.textContent = `Error: ${data.error || res.statusText || 'Failed to save key.'}`;
+                    feedbackElement.textContent = `Error: ${data.error || res.statusText || 'Failed to save config.'}`;
                     feedbackElement.classList.add('error');
                 }
-
             } catch (err) {
-                feedbackElement.textContent = "Network error while saving the key.";
+                feedbackElement.textContent = "Network error while saving config.";
                 feedbackElement.classList.add('error');
-                console.error("Save key error:", err);
+                console.error("Save key/URL error:", err);
             }
         }
 
-        async function loadKey(provider) {
+        async function loadKeyAndUrl(provider) { // Renamed function
             const keyInput = document.getElementById(`${provider}-key`);
+            const urlInput = document.getElementById(`${provider}-url`); // Get URL input
             const feedbackElement = document.getElementById(`${provider}-feedback`);
-            if (!keyInput) return; // Skip if input doesn't exist
+
+            if (!keyInput || !urlInput) return; // Skip if elements don't exist
 
             try {
-                // *** URL Correction: Ensure '/settings' prefix ***
-                const res = await fetch(`/settings/api/keys/${provider}`); // <--- Verified URL
+                const res = await fetch(`/settings/api/keys/${provider}`);
 
                 if (res.ok) {
                     const data = await res.json();
+                    // Populate both key and URL
                     keyInput.type = data.key ? 'password' : 'text';
                     keyInput.value = data.key || "";
+                    urlInput.value = data.api_url || ""; // Populate URL input
+
                     if (data.key) {
-                        feedbackElement.textContent = 'Key loaded (masked).';
-                        feedbackElement.className = 'key-save-feedback success';
+                        feedbackElement.textContent = 'Config loaded.'; // Updated message
+                        feedbackElement.className = 'feedback success';
                     } else {
-                        feedbackElement.textContent = ''; // Clear feedback if no key
-                        feedbackElement.className = 'key-save-feedback';
+                        feedbackElement.textContent = `No config saved for ${provider}.`; // Clearer message
+                        feedbackElement.className = 'feedback info';
                     }
                 } else {
-                    feedbackElement.textContent = `Could not load key: ${res.status} ${res.statusText}`;
-                    feedbackElement.className = 'key-save-feedback error';
+                    feedbackElement.textContent = `Could not load config: ${res.status} ${res.statusText}`;
+                    feedbackElement.className = 'feedback error';
                 }
             } catch (err) {
-                feedbackElement.textContent = "Network error loading key.";
-                feedbackElement.className = 'key-save-feedback error';
-                console.warn("Unable to fetch key:", err);
+                feedbackElement.textContent = "Network error loading config.";
+                feedbackElement.className = 'feedback error';
+                console.warn(`Unable to fetch config for ${provider}:`, err);
             }
         }
 
         // --- Page Initialization ---
-
         window.onload = () => {
-            // Load keys for all relevant providers
-            loadKey("openrouter");
-            loadKey("cosmos");
-            // Add others if needed
+            // 1. Populate models based on initially selected provider
+            populateModels(initialSelectedProvider);
+
+            // 2. Load keys and URLs for all configured providers
+            loadKeyAndUrl("openrouter");
+            loadKeyAndUrl("cosmos");
         };
     </script>
 </body>
