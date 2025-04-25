@@ -2,7 +2,7 @@ name: Deploy MythosQuest to Oracle Server
 
 on:
   push:
-    branches: [ refactor ]
+    branches: [ main ]
 
 jobs:
   deploy:
