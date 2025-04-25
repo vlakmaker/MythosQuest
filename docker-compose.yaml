@@ -2,15 +2,19 @@ services:
   mythosquest:
     build: .
     ports:
-      - "5000:5000" # Assumes you want port 5000 exposed on the Oracle server
+      - "5000:5000"
     env_file:
-      - .env # Make sure this file exists and is secured on the server!
-    # volumes: <-- REMOVED this line for production deployment
-    #   - .:/app
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mythosquest.rule=Host(`mythosquest.bittygpt.com`)"
+      - "traefik.http.routers.mythosquest.entrypoints=websecure"
+      - "traefik.http.routers.mythosquest.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mythosquest.loadbalancer.server.port=5000"
     restart: always
-    # Optional: Add logging driver if needed
-    # logging:
-    #   driver: "json-file"
-    #   options:
-    #     max-size: "10m"
-    #     max-file: "3"
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    external: true
